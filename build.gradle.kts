@@ -12,6 +12,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
+    implementation("org.antlr:antlr4-runtime:4.13.1")
 }
 
 tasks.test {
