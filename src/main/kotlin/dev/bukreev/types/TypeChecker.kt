@@ -1,450 +1,873 @@
 package dev.bukreev.types
 
-import dev.bukreev.types.parsing.stellaParser
-import dev.bukreev.types.parsing.stellaParserVisitor
+import dev.bukreev.types.parsing.stellaParser.*
+import dev.bukreev.types.parsing.stellaParserListener
+import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ErrorNode
-import org.antlr.v4.runtime.tree.ParseTree
-import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class TypeChecker : stellaParserVisitor<Type> {
-    override fun visit(tree: ParseTree): Type {
+class TypeChecker(val typeResolver: TypeResolver) : stellaParserListener {
+    override fun visitTerminal(node: TerminalNode) {
         TODO("Not yet implemented")
     }
 
-    override fun visitChildren(node: RuleNode): Type {
+    override fun visitErrorNode(node: ErrorNode) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTerminal(node: TerminalNode): Type {
+    override fun enterEveryRule(ctx: ParserRuleContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitErrorNode(node: ErrorNode): Type {
+    override fun exitEveryRule(ctx: ParserRuleContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Program(ctx: stellaParser.Start_ProgramContext): Type {
+    override fun enterStart_Program(ctx: Start_ProgramContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Expr(ctx: stellaParser.Start_ExprContext): Type {
+    override fun exitStart_Program(ctx: Start_ProgramContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Type(ctx: stellaParser.Start_TypeContext): Type {
+    override fun enterStart_Expr(ctx: Start_ExprContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitProgram(ctx: stellaParser.ProgramContext): Type {
+    override fun exitStart_Expr(ctx: Start_ExprContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLanguageCore(ctx: stellaParser.LanguageCoreContext): Type {
+    override fun enterStart_Type(ctx: Start_TypeContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitAnExtension(ctx: stellaParser.AnExtensionContext): Type {
+    override fun exitStart_Type(ctx: Start_TypeContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclFun(ctx: stellaParser.DeclFunContext): Type {
+    override fun enterProgram(ctx: ProgramContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclFunGeneric(ctx: stellaParser.DeclFunGenericContext): Type {
+    override fun exitProgram(ctx: ProgramContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclTypeAlias(ctx: stellaParser.DeclTypeAliasContext): Type {
+    override fun enterLanguageCore(ctx: LanguageCoreContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclExceptionType(ctx: stellaParser.DeclExceptionTypeContext): Type {
+    override fun exitLanguageCore(ctx: LanguageCoreContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclExceptionVariant(ctx: stellaParser.DeclExceptionVariantContext): Type {
+    override fun enterAnExtension(ctx: AnExtensionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitInlineAnnotation(ctx: stellaParser.InlineAnnotationContext): Type {
+    override fun exitAnExtension(ctx: AnExtensionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitParamDecl(ctx: stellaParser.ParamDeclContext): Type {
+    override fun enterDeclFun(ctx: DeclFunContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitFold(ctx: stellaParser.FoldContext): Type {
+    override fun exitDeclFun(ctx: DeclFunContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitAdd(ctx: stellaParser.AddContext): Type {
+    override fun enterDeclFunGeneric(ctx: DeclFunGenericContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitIsZero(ctx: stellaParser.IsZeroContext): Type {
+    override fun exitDeclFunGeneric(ctx: DeclFunGenericContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitVar(ctx: stellaParser.VarContext): Type {
+    override fun enterDeclTypeAlias(ctx: DeclTypeAliasContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeAbstraction(ctx: stellaParser.TypeAbstractionContext): Type {
+    override fun exitDeclTypeAlias(ctx: DeclTypeAliasContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDivide(ctx: stellaParser.DivideContext): Type {
+    override fun enterDeclExceptionType(ctx: DeclExceptionTypeContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLessThan(ctx: stellaParser.LessThanContext): Type {
+    override fun exitDeclExceptionType(ctx: DeclExceptionTypeContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDotRecord(ctx: stellaParser.DotRecordContext): Type {
+    override fun enterDeclExceptionVariant(ctx: DeclExceptionVariantContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitGreaterThan(ctx: stellaParser.GreaterThanContext): Type {
+    override fun exitDeclExceptionVariant(ctx: DeclExceptionVariantContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitEqual(ctx: stellaParser.EqualContext): Type {
+    override fun enterInlineAnnotation(ctx: InlineAnnotationContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitThrow(ctx: stellaParser.ThrowContext): Type {
+    override fun exitInlineAnnotation(ctx: InlineAnnotationContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitMultiply(ctx: stellaParser.MultiplyContext): Type {
+    override fun enterParamDecl(ctx: ParamDeclContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstMemory(ctx: stellaParser.ConstMemoryContext): Type {
+    override fun exitParamDecl(ctx: ParamDeclContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitList(ctx: stellaParser.ListContext): Type {
+    override fun enterFold(ctx: FoldContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTryCatch(ctx: stellaParser.TryCatchContext): Type {
+    override fun exitFold(ctx: FoldContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitHead(ctx: stellaParser.HeadContext): Type {
+    override fun enterAdd(ctx: AddContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitNotEqual(ctx: stellaParser.NotEqualContext): Type {
+    override fun exitAdd(ctx: AddContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstUnit(ctx: stellaParser.ConstUnitContext): Type {
+    override fun enterIsZero(ctx: IsZeroContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitSequence(ctx: stellaParser.SequenceContext): Type {
+    override fun exitIsZero(ctx: IsZeroContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstFalse(ctx: stellaParser.ConstFalseContext): Type {
+    override fun enterVar(ctx: VarContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitAbstraction(ctx: stellaParser.AbstractionContext): Type {
+    override fun exitVar(ctx: VarContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstInt(ctx: stellaParser.ConstIntContext): Type {
+    override fun enterTypeAbstraction(ctx: TypeAbstractionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitVariant(ctx: stellaParser.VariantContext): Type {
+    override fun exitTypeAbstraction(ctx: TypeAbstractionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstTrue(ctx: stellaParser.ConstTrueContext): Type {
+    override fun enterDivide(ctx: DivideContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitSubtract(ctx: stellaParser.SubtractContext): Type {
+    override fun exitDivide(ctx: DivideContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeCast(ctx: stellaParser.TypeCastContext): Type {
+    override fun enterLessThan(ctx: LessThanContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitIf(ctx: stellaParser.IfContext): Type {
+    override fun exitLessThan(ctx: LessThanContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitApplication(ctx: stellaParser.ApplicationContext): Type {
+    override fun enterDotRecord(ctx: DotRecordContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeref(ctx: stellaParser.DerefContext): Type {
+    override fun exitDotRecord(ctx: DotRecordContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitIsEmpty(ctx: stellaParser.IsEmptyContext): Type {
+    override fun enterGreaterThan(ctx: GreaterThanContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPanic(ctx: stellaParser.PanicContext): Type {
+    override fun exitGreaterThan(ctx: GreaterThanContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLessThanOrEqual(ctx: stellaParser.LessThanOrEqualContext): Type {
+    override fun enterEqual(ctx: EqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitSucc(ctx: stellaParser.SuccContext): Type {
+    override fun exitEqual(ctx: EqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitInl(ctx: stellaParser.InlContext): Type {
+    override fun enterThrow(ctx: ThrowContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitGreaterThanOrEqual(ctx: stellaParser.GreaterThanOrEqualContext): Type {
+    override fun exitThrow(ctx: ThrowContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitInr(ctx: stellaParser.InrContext): Type {
+    override fun enterMultiply(ctx: MultiplyContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitMatch(ctx: stellaParser.MatchContext): Type {
+    override fun exitMultiply(ctx: MultiplyContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicNot(ctx: stellaParser.LogicNotContext): Type {
+    override fun enterConstMemory(ctx: ConstMemoryContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitParenthesisedExpr(ctx: stellaParser.ParenthesisedExprContext): Type {
+    override fun exitConstMemory(ctx: ConstMemoryContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTail(ctx: stellaParser.TailContext): Type {
+    override fun enterList(ctx: ListContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitRecord(ctx: stellaParser.RecordContext): Type {
+    override fun exitList(ctx: ListContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicAnd(ctx: stellaParser.LogicAndContext): Type {
+    override fun enterTryCatch(ctx: TryCatchContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeApplication(ctx: stellaParser.TypeApplicationContext): Type {
+    override fun exitTryCatch(ctx: TryCatchContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLetRec(ctx: stellaParser.LetRecContext): Type {
+    override fun enterHead(ctx: HeadContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicOr(ctx: stellaParser.LogicOrContext): Type {
+    override fun exitHead(ctx: HeadContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTryWith(ctx: stellaParser.TryWithContext): Type {
+    override fun enterNotEqual(ctx: NotEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPred(ctx: stellaParser.PredContext): Type {
+    override fun exitNotEqual(ctx: NotEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeAsc(ctx: stellaParser.TypeAscContext): Type {
+    override fun enterConstUnit(ctx: ConstUnitContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitNatRec(ctx: stellaParser.NatRecContext): Type {
+    override fun exitConstUnit(ctx: ConstUnitContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitUnfold(ctx: stellaParser.UnfoldContext): Type {
+    override fun enterSequence(ctx: SequenceContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitRef(ctx: stellaParser.RefContext): Type {
+    override fun exitSequence(ctx: SequenceContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitDotTuple(ctx: stellaParser.DotTupleContext): Type {
+    override fun enterConstFalse(ctx: ConstFalseContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitFix(ctx: stellaParser.FixContext): Type {
+    override fun exitConstFalse(ctx: ConstFalseContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLet(ctx: stellaParser.LetContext): Type {
+    override fun enterAbstraction(ctx: AbstractionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitAssign(ctx: stellaParser.AssignContext): Type {
+    override fun exitAbstraction(ctx: AbstractionContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTuple(ctx: stellaParser.TupleContext): Type {
+    override fun enterConstInt(ctx: ConstIntContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitConsList(ctx: stellaParser.ConsListContext): Type {
+    override fun exitConstInt(ctx: ConstIntContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternBinding(ctx: stellaParser.PatternBindingContext): Type {
+    override fun enterVariant(ctx: VariantContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitBinding(ctx: stellaParser.BindingContext): Type {
+    override fun exitVariant(ctx: VariantContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitMatchCase(ctx: stellaParser.MatchCaseContext): Type {
+    override fun enterConstTrue(ctx: ConstTrueContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternVariant(ctx: stellaParser.PatternVariantContext): Type {
+    override fun exitConstTrue(ctx: ConstTrueContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInl(ctx: stellaParser.PatternInlContext): Type {
+    override fun enterSubtract(ctx: SubtractContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInr(ctx: stellaParser.PatternInrContext): Type {
+    override fun exitSubtract(ctx: SubtractContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternTuple(ctx: stellaParser.PatternTupleContext): Type {
+    override fun enterTypeCast(ctx: TypeCastContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternRecord(ctx: stellaParser.PatternRecordContext): Type {
+    override fun exitTypeCast(ctx: TypeCastContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternList(ctx: stellaParser.PatternListContext): Type {
+    override fun enterIf(ctx: IfContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternCons(ctx: stellaParser.PatternConsContext): Type {
+    override fun exitIf(ctx: IfContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternFalse(ctx: stellaParser.PatternFalseContext): Type {
+    override fun enterApplication(ctx: ApplicationContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternTrue(ctx: stellaParser.PatternTrueContext): Type {
+    override fun exitApplication(ctx: ApplicationContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternUnit(ctx: stellaParser.PatternUnitContext): Type {
+    override fun enterDeref(ctx: DerefContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInt(ctx: stellaParser.PatternIntContext): Type {
+    override fun exitDeref(ctx: DerefContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternSucc(ctx: stellaParser.PatternSuccContext): Type {
+    override fun enterIsEmpty(ctx: IsEmptyContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternVar(ctx: stellaParser.PatternVarContext): Type {
+    override fun exitIsEmpty(ctx: IsEmptyContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitParenthesisedPattern(ctx: stellaParser.ParenthesisedPatternContext): Type {
+    override fun enterPanic(ctx: PanicContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitLabelledPattern(ctx: stellaParser.LabelledPatternContext): Type {
+    override fun exitPanic(ctx: PanicContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeTuple(ctx: stellaParser.TypeTupleContext): Type {
+    override fun enterLessThanOrEqual(ctx: LessThanOrEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeTop(ctx: stellaParser.TypeTopContext): Type {
+    override fun exitLessThanOrEqual(ctx: LessThanOrEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeBool(ctx: stellaParser.TypeBoolContext): Type {
+    override fun enterSucc(ctx: SuccContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeRef(ctx: stellaParser.TypeRefContext): Type {
+    override fun exitSucc(ctx: SuccContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeRec(ctx: stellaParser.TypeRecContext): Type {
+    override fun enterInl(ctx: InlContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeSum(ctx: stellaParser.TypeSumContext): Type {
+    override fun exitInl(ctx: InlContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeVar(ctx: stellaParser.TypeVarContext): Type {
+    override fun enterGreaterThanOrEqual(ctx: GreaterThanOrEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeVariant(ctx: stellaParser.TypeVariantContext): Type {
+    override fun exitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeUnit(ctx: stellaParser.TypeUnitContext): Type {
+    override fun enterInr(ctx: InrContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeNat(ctx: stellaParser.TypeNatContext): Type {
+    override fun exitInr(ctx: InrContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeBottom(ctx: stellaParser.TypeBottomContext): Type {
+    override fun enterMatch(ctx: MatchContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeParens(ctx: stellaParser.TypeParensContext): Type {
+    override fun exitMatch(ctx: MatchContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeFun(ctx: stellaParser.TypeFunContext): Type {
+    override fun enterLogicNot(ctx: LogicNotContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeForAll(ctx: stellaParser.TypeForAllContext): Type {
+    override fun exitLogicNot(ctx: LogicNotContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeRecord(ctx: stellaParser.TypeRecordContext): Type {
+    override fun enterParenthesisedExpr(ctx: ParenthesisedExprContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeList(ctx: stellaParser.TypeListContext): Type {
+    override fun exitParenthesisedExpr(ctx: ParenthesisedExprContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitRecordFieldType(ctx: stellaParser.RecordFieldTypeContext): Type {
+    override fun enterTail(ctx: TailContext) {
         TODO("Not yet implemented")
     }
 
-    override fun visitVariantFieldType(ctx: stellaParser.VariantFieldTypeContext): Type {
+    override fun exitTail(ctx: TailContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterRecord(ctx: RecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitRecord(ctx: RecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterLogicAnd(ctx: LogicAndContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitLogicAnd(ctx: LogicAndContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeApplication(ctx: TypeApplicationContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeApplication(ctx: TypeApplicationContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterLetRec(ctx: LetRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitLetRec(ctx: LetRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterLogicOr(ctx: LogicOrContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitLogicOr(ctx: LogicOrContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTryWith(ctx: TryWithContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTryWith(ctx: TryWithContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPred(ctx: PredContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPred(ctx: PredContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeAsc(ctx: TypeAscContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeAsc(ctx: TypeAscContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterNatRec(ctx: NatRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitNatRec(ctx: NatRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterUnfold(ctx: UnfoldContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitUnfold(ctx: UnfoldContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterRef(ctx: RefContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitRef(ctx: RefContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterDotTuple(ctx: DotTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitDotTuple(ctx: DotTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterFix(ctx: FixContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitFix(ctx: FixContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterLet(ctx: LetContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitLet(ctx: LetContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterAssign(ctx: AssignContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitAssign(ctx: AssignContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTuple(ctx: TupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTuple(ctx: TupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterConsList(ctx: ConsListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitConsList(ctx: ConsListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternBinding(ctx: PatternBindingContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternBinding(ctx: PatternBindingContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterBinding(ctx: BindingContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitBinding(ctx: BindingContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterMatchCase(ctx: MatchCaseContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitMatchCase(ctx: MatchCaseContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternVariant(ctx: PatternVariantContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternVariant(ctx: PatternVariantContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternInl(ctx: PatternInlContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternInl(ctx: PatternInlContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternInr(ctx: PatternInrContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternInr(ctx: PatternInrContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternTuple(ctx: PatternTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternTuple(ctx: PatternTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternRecord(ctx: PatternRecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternRecord(ctx: PatternRecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternList(ctx: PatternListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternList(ctx: PatternListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternCons(ctx: PatternConsContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternCons(ctx: PatternConsContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternFalse(ctx: PatternFalseContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternFalse(ctx: PatternFalseContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternTrue(ctx: PatternTrueContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternTrue(ctx: PatternTrueContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternUnit(ctx: PatternUnitContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternUnit(ctx: PatternUnitContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternInt(ctx: PatternIntContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternInt(ctx: PatternIntContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternSucc(ctx: PatternSuccContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternSucc(ctx: PatternSuccContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterPatternVar(ctx: PatternVarContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitPatternVar(ctx: PatternVarContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterParenthesisedPattern(ctx: ParenthesisedPatternContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitParenthesisedPattern(ctx: ParenthesisedPatternContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterLabelledPattern(ctx: LabelledPatternContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitLabelledPattern(ctx: LabelledPatternContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeTuple(ctx: TypeTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeTuple(ctx: TypeTupleContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeTop(ctx: TypeTopContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeTop(ctx: TypeTopContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeBool(ctx: TypeBoolContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeBool(ctx: TypeBoolContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeRef(ctx: TypeRefContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeRef(ctx: TypeRefContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeRec(ctx: TypeRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeRec(ctx: TypeRecContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeSum(ctx: TypeSumContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeSum(ctx: TypeSumContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeVar(ctx: TypeVarContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeVar(ctx: TypeVarContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeVariant(ctx: TypeVariantContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeVariant(ctx: TypeVariantContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeUnit(ctx: TypeUnitContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeUnit(ctx: TypeUnitContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeNat(ctx: TypeNatContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeNat(ctx: TypeNatContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeBottom(ctx: TypeBottomContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeBottom(ctx: TypeBottomContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeParens(ctx: TypeParensContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeParens(ctx: TypeParensContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeFun(ctx: TypeFunContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeFun(ctx: TypeFunContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeForAll(ctx: TypeForAllContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeForAll(ctx: TypeForAllContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeRecord(ctx: TypeRecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeRecord(ctx: TypeRecordContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterTypeList(ctx: TypeListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitTypeList(ctx: TypeListContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterRecordFieldType(ctx: RecordFieldTypeContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitRecordFieldType(ctx: RecordFieldTypeContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun enterVariantFieldType(ctx: VariantFieldTypeContext) {
+        TODO("Not yet implemented")
+    }
+
+    override fun exitVariantFieldType(ctx: VariantFieldTypeContext) {
         TODO("Not yet implemented")
     }
 }
