@@ -2,8 +2,8 @@ package dev.bukreev.types
 
 sealed interface Type
 
-sealed class IntType : Type
+data object NatType : Type
 
-sealed class BoolType : Type
+data object BoolType : Type
 
-sealed class FuncType(val argType: Type, val returnType: Type) : Type
+data class FuncType(val argType: Type, val returnType: Type) : Type
