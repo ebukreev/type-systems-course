@@ -1,12 +1,19 @@
 package dev.bukreev.types
 
-import dev.bukreev.types.parsing.stellaLexer
-import dev.bukreev.types.parsing.stellaParser
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
+import java.lang.StringBuilder
 
 
 fun main() {
+    val sb = StringBuilder()
+    var line = readlnOrNull()
+    while (line != null) {
+        sb.append(line)
+        line = readlnOrNull()
+    }
+    Parser.parse(sb.toString()).accept(TypeChecker())
+}
+
+fun debug() {
     val exampleStellaCode = """
         language core;
         fn Bool::not(b : Bool) -> Bool {
@@ -25,10 +32,7 @@ fun main() {
         }
     """.trimIndent()
 
-    val lexer = stellaLexer(CharStreams.fromString(exampleStellaCode))
-    val tokens = CommonTokenStream(lexer)
-    val parser = stellaParser(tokens)
-    val tree = parser.program()
+    val tree = Parser.parse(exampleStellaCode)
 
     println(tree.accept(TypeChecker()))
 }
