@@ -48,9 +48,16 @@ data class ErrorUnexpectedTypeForExpression(val expected: Type, val actual: Type
     }
 }
 
-data object ErrorNotAFunction : Error {
+data class ErrorNotAFunction(val expression: ExprContext, val type: Type) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_NOT_A_FUNCTION:
+             для выражения
+               ${expression.toStringTree()}
+             ожидается функциональный тип
+             но получен тип
+               $type
+       """.trimIndent()
     }
 }
 

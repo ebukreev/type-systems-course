@@ -182,7 +182,13 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitAbstraction(ctx: AbstractionContext): Type {
-        TODO("Not yet implemented")
+        val param = ctx.paramDecl
+        val paramName = param.name.text
+        val paramType = param.stellatype().accept(this)
+
+        return typesContext.runWithTypeInfo(paramName, paramType) {
+            FuncType(paramType, ctx.returnExpr.accept(this))
+        }
     }
 
     override fun visitConstInt(ctx: ConstIntContext): Type {
@@ -222,7 +228,18 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitApplication(ctx: ApplicationContext): Type {
-        TODO("Not yet implemented")
+        val funType = ctx.`fun`.accept(this)
+        val exprType = ctx.expr.accept(this)
+
+        if (funType !is FuncType) {
+            ErrorNotAFunction(ctx.`fun`, funType).report()
+        }
+
+        if (!isUnifiable(funType.argType, exprType)) {
+            ErrorUnexpectedTypeForExpression(funType.argType, exprType, ctx).report()
+        }
+
+        return funType.returnType
     }
 
     override fun visitDeref(ctx: DerefContext): Type {
@@ -481,11 +498,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeParens(ctx: TypeParensContext): Type {
-        TODO("Not yet implemented")
+        return ctx.stellatype().accept(this)
     }
 
     override fun visitTypeFun(ctx: TypeFunContext): Type {
-        TODO("Not yet implemented")
+        val paramType = ctx.paramTypes.first().accept(this)
+        val returnType = ctx.returnType.accept(this)
+
+        return FuncType(paramType, returnType)
     }
 
     override fun visitTypeForAll(ctx: TypeForAllContext): Type {
