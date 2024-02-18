@@ -7,58 +7,61 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type?> {
-    override fun visit(tree: ParseTree): Type? {
+class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
+    override fun visit(tree: ParseTree): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitChildren(node: RuleNode): Type? {
+    override fun visitChildren(node: RuleNode): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTerminal(node: TerminalNode): Type? {
+    override fun visitTerminal(node: TerminalNode): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitErrorNode(node: ErrorNode): Type? {
+    override fun visitErrorNode(node: ErrorNode): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Program(ctx: Start_ProgramContext): Type? {
+    override fun visitStart_Program(ctx: Start_ProgramContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Expr(ctx: Start_ExprContext): Type? {
+    override fun visitStart_Expr(ctx: Start_ExprContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitStart_Type(ctx: Start_TypeContext): Type? {
+    override fun visitStart_Type(ctx: Start_TypeContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitProgram(ctx: ProgramContext): Type? {
-        if (!ctx.decls.any { it is DeclFunContext && it.name.text == "main" }) {
-            ErrorMissingMain.report()
+    override fun visitProgram(ctx: ProgramContext): Type {
+        var mainFunctionType: Type? = null
+        for (decl in ctx.decls) {
+            val type = decl.accept(this)
+            if (decl is DeclFunContext && decl.name.text == "main") {
+                mainFunctionType = type
+            }
         }
 
-        ctx.decls.forEach { it.accept(this) }
-        return null
+        return mainFunctionType ?: ErrorMissingMain.report()
     }
 
-    override fun visitLanguageCore(ctx: LanguageCoreContext): Type? {
+    override fun visitLanguageCore(ctx: LanguageCoreContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitAnExtension(ctx: AnExtensionContext): Type? {
+    override fun visitAnExtension(ctx: AnExtensionContext): Type {
         TODO("Not yet implemented")
     }
 
     override fun visitDeclFun(ctx: DeclFunContext): Type {
         val param = ctx.paramDecl
-        val paramType = param.paramType.accept(this)!!
-        val returnType = ctx.returnType.accept(this)!!
+        val paramType = param.paramType.accept(this)
+        val returnType = ctx.returnType.accept(this)
         return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
-            val returnExpressionType = ctx.returnExpr.accept(this)!!
+            val returnExpressionType = ctx.returnExpr.accept(this)
             if (!isUnifiable(returnType, returnExpressionType)) {
                 ErrorUnexpectedTypeForExpression(returnType, returnExpressionType, ctx.returnExpr).report()
             }
@@ -67,35 +70,35 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         }
     }
 
-    override fun visitDeclFunGeneric(ctx: DeclFunGenericContext): Type? {
+    override fun visitDeclFunGeneric(ctx: DeclFunGenericContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclTypeAlias(ctx: DeclTypeAliasContext): Type? {
+    override fun visitDeclTypeAlias(ctx: DeclTypeAliasContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclExceptionType(ctx: DeclExceptionTypeContext): Type? {
+    override fun visitDeclExceptionType(ctx: DeclExceptionTypeContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclExceptionVariant(ctx: DeclExceptionVariantContext): Type? {
+    override fun visitDeclExceptionVariant(ctx: DeclExceptionVariantContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitInlineAnnotation(ctx: InlineAnnotationContext): Type? {
+    override fun visitInlineAnnotation(ctx: InlineAnnotationContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitParamDecl(ctx: ParamDeclContext): Type? {
+    override fun visitParamDecl(ctx: ParamDeclContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitFold(ctx: FoldContext): Type? {
+    override fun visitFold(ctx: FoldContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitAdd(ctx: AddContext): Type? {
+    override fun visitAdd(ctx: AddContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -114,63 +117,63 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return typesContext.getType(varName) ?: ErrorUndefinedVariable(varName, ctx.parent).report()
     }
 
-    override fun visitTypeAbstraction(ctx: TypeAbstractionContext): Type? {
+    override fun visitTypeAbstraction(ctx: TypeAbstractionContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDivide(ctx: DivideContext): Type? {
+    override fun visitDivide(ctx: DivideContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLessThan(ctx: LessThanContext): Type? {
+    override fun visitLessThan(ctx: LessThanContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDotRecord(ctx: DotRecordContext): Type? {
+    override fun visitDotRecord(ctx: DotRecordContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitGreaterThan(ctx: GreaterThanContext): Type? {
+    override fun visitGreaterThan(ctx: GreaterThanContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitEqual(ctx: EqualContext): Type? {
+    override fun visitEqual(ctx: EqualContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitThrow(ctx: ThrowContext): Type? {
+    override fun visitThrow(ctx: ThrowContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitMultiply(ctx: MultiplyContext): Type? {
+    override fun visitMultiply(ctx: MultiplyContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstMemory(ctx: ConstMemoryContext): Type? {
+    override fun visitConstMemory(ctx: ConstMemoryContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitList(ctx: ListContext): Type? {
+    override fun visitList(ctx: ListContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTryCatch(ctx: TryCatchContext): Type? {
+    override fun visitTryCatch(ctx: TryCatchContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitHead(ctx: HeadContext): Type? {
+    override fun visitHead(ctx: HeadContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitNotEqual(ctx: NotEqualContext): Type? {
+    override fun visitNotEqual(ctx: NotEqualContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstUnit(ctx: ConstUnitContext): Type? {
+    override fun visitConstUnit(ctx: ConstUnitContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitSequence(ctx: SequenceContext): Type? {
+    override fun visitSequence(ctx: SequenceContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -178,7 +181,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return BoolType
     }
 
-    override fun visitAbstraction(ctx: AbstractionContext): Type? {
+    override fun visitAbstraction(ctx: AbstractionContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -186,7 +189,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return NatType
     }
 
-    override fun visitVariant(ctx: VariantContext): Type? {
+    override fun visitVariant(ctx: VariantContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -194,11 +197,11 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return BoolType
     }
 
-    override fun visitSubtract(ctx: SubtractContext): Type? {
+    override fun visitSubtract(ctx: SubtractContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeCast(ctx: TypeCastContext): Type? {
+    override fun visitTypeCast(ctx: TypeCastContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -208,8 +211,8 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
             ErrorUnexpectedTypeForExpression(BoolType, conditionType, ctx).report()
         }
 
-        val thenType = ctx.thenExpr.accept(this)!!
-        val elseType = ctx.elseExpr.accept(this)!!
+        val thenType = ctx.thenExpr.accept(this)
+        val elseType = ctx.elseExpr.accept(this)
 
         if (!isUnifiable(thenType, elseType)) {
             ErrorUnexpectedTypeForExpression(thenType, elseType, ctx).report()
@@ -218,23 +221,23 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return thenType
     }
 
-    override fun visitApplication(ctx: ApplicationContext): Type? {
+    override fun visitApplication(ctx: ApplicationContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeref(ctx: DerefContext): Type? {
+    override fun visitDeref(ctx: DerefContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitIsEmpty(ctx: IsEmptyContext): Type? {
+    override fun visitIsEmpty(ctx: IsEmptyContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPanic(ctx: PanicContext): Type? {
+    override fun visitPanic(ctx: PanicContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLessThanOrEqual(ctx: LessThanOrEqualContext): Type? {
+    override fun visitLessThanOrEqual(ctx: LessThanOrEqualContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -247,55 +250,55 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return NatType
     }
 
-    override fun visitInl(ctx: InlContext): Type? {
+    override fun visitInl(ctx: InlContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext): Type? {
+    override fun visitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitInr(ctx: InrContext): Type? {
+    override fun visitInr(ctx: InrContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitMatch(ctx: MatchContext): Type? {
+    override fun visitMatch(ctx: MatchContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicNot(ctx: LogicNotContext): Type? {
+    override fun visitLogicNot(ctx: LogicNotContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitParenthesisedExpr(ctx: ParenthesisedExprContext): Type? {
+    override fun visitParenthesisedExpr(ctx: ParenthesisedExprContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTail(ctx: TailContext): Type? {
+    override fun visitTail(ctx: TailContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitRecord(ctx: RecordContext): Type? {
+    override fun visitRecord(ctx: RecordContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicAnd(ctx: LogicAndContext): Type? {
+    override fun visitLogicAnd(ctx: LogicAndContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeApplication(ctx: TypeApplicationContext): Type? {
+    override fun visitTypeApplication(ctx: TypeApplicationContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLetRec(ctx: LetRecContext): Type? {
+    override fun visitLetRec(ctx: LetRecContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLogicOr(ctx: LogicOrContext): Type? {
+    override fun visitLogicOr(ctx: LogicOrContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTryWith(ctx: TryWithContext): Type? {
+    override fun visitTryWith(ctx: TryWithContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -308,7 +311,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return NatType
     }
 
-    override fun visitTypeAsc(ctx: TypeAscContext): Type? {
+    override fun visitTypeAsc(ctx: TypeAscContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -318,8 +321,8 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
             ErrorUnexpectedTypeForExpression(NatType, nType, ctx).report()
         }
 
-        val zType = ctx.initial.accept(this)!!
-        val sType = ctx.step.accept(this)!!
+        val zType = ctx.initial.accept(this)
+        val sType = ctx.step.accept(this)
 
         val expectedSType = FuncType(NatType, FuncType(zType, zType))
         if (!isUnifiable(expectedSType, sType)) {
@@ -329,115 +332,115 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return zType
     }
 
-    override fun visitUnfold(ctx: UnfoldContext): Type? {
+    override fun visitUnfold(ctx: UnfoldContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitRef(ctx: RefContext): Type? {
+    override fun visitRef(ctx: RefContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitDotTuple(ctx: DotTupleContext): Type? {
+    override fun visitDotTuple(ctx: DotTupleContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitFix(ctx: FixContext): Type? {
+    override fun visitFix(ctx: FixContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLet(ctx: LetContext): Type? {
+    override fun visitLet(ctx: LetContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitAssign(ctx: AssignContext): Type? {
+    override fun visitAssign(ctx: AssignContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTuple(ctx: TupleContext): Type? {
+    override fun visitTuple(ctx: TupleContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitConsList(ctx: ConsListContext): Type? {
+    override fun visitConsList(ctx: ConsListContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternBinding(ctx: PatternBindingContext): Type? {
+    override fun visitPatternBinding(ctx: PatternBindingContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitBinding(ctx: BindingContext): Type? {
+    override fun visitBinding(ctx: BindingContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitMatchCase(ctx: MatchCaseContext): Type? {
+    override fun visitMatchCase(ctx: MatchCaseContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternVariant(ctx: PatternVariantContext): Type? {
+    override fun visitPatternVariant(ctx: PatternVariantContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInl(ctx: PatternInlContext): Type? {
+    override fun visitPatternInl(ctx: PatternInlContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInr(ctx: PatternInrContext): Type? {
+    override fun visitPatternInr(ctx: PatternInrContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternTuple(ctx: PatternTupleContext): Type? {
+    override fun visitPatternTuple(ctx: PatternTupleContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternRecord(ctx: PatternRecordContext): Type? {
+    override fun visitPatternRecord(ctx: PatternRecordContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternList(ctx: PatternListContext): Type? {
+    override fun visitPatternList(ctx: PatternListContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternCons(ctx: PatternConsContext): Type? {
+    override fun visitPatternCons(ctx: PatternConsContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternFalse(ctx: PatternFalseContext): Type? {
+    override fun visitPatternFalse(ctx: PatternFalseContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternTrue(ctx: PatternTrueContext): Type? {
+    override fun visitPatternTrue(ctx: PatternTrueContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternUnit(ctx: PatternUnitContext): Type? {
+    override fun visitPatternUnit(ctx: PatternUnitContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternInt(ctx: PatternIntContext): Type? {
+    override fun visitPatternInt(ctx: PatternIntContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternSucc(ctx: PatternSuccContext): Type? {
+    override fun visitPatternSucc(ctx: PatternSuccContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitPatternVar(ctx: PatternVarContext): Type? {
+    override fun visitPatternVar(ctx: PatternVarContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitParenthesisedPattern(ctx: ParenthesisedPatternContext): Type? {
+    override fun visitParenthesisedPattern(ctx: ParenthesisedPatternContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitLabelledPattern(ctx: LabelledPatternContext): Type? {
+    override fun visitLabelledPattern(ctx: LabelledPatternContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeTuple(ctx: TypeTupleContext): Type? {
+    override fun visitTypeTuple(ctx: TypeTupleContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeTop(ctx: TypeTopContext): Type? {
+    override fun visitTypeTop(ctx: TypeTopContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -445,27 +448,27 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return BoolType
     }
 
-    override fun visitTypeRef(ctx: TypeRefContext): Type? {
+    override fun visitTypeRef(ctx: TypeRefContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeRec(ctx: TypeRecContext): Type? {
+    override fun visitTypeRec(ctx: TypeRecContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeSum(ctx: TypeSumContext): Type? {
+    override fun visitTypeSum(ctx: TypeSumContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeVar(ctx: TypeVarContext): Type? {
+    override fun visitTypeVar(ctx: TypeVarContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeVariant(ctx: TypeVariantContext): Type? {
+    override fun visitTypeVariant(ctx: TypeVariantContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeUnit(ctx: TypeUnitContext): Type? {
+    override fun visitTypeUnit(ctx: TypeUnitContext): Type {
         TODO("Not yet implemented")
     }
 
@@ -473,35 +476,35 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return NatType
     }
 
-    override fun visitTypeBottom(ctx: TypeBottomContext): Type? {
+    override fun visitTypeBottom(ctx: TypeBottomContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeParens(ctx: TypeParensContext): Type? {
+    override fun visitTypeParens(ctx: TypeParensContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeFun(ctx: TypeFunContext): Type? {
+    override fun visitTypeFun(ctx: TypeFunContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeForAll(ctx: TypeForAllContext): Type? {
+    override fun visitTypeForAll(ctx: TypeForAllContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeRecord(ctx: TypeRecordContext): Type? {
+    override fun visitTypeRecord(ctx: TypeRecordContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeList(ctx: TypeListContext): Type? {
+    override fun visitTypeList(ctx: TypeListContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitRecordFieldType(ctx: RecordFieldTypeContext): Type? {
+    override fun visitRecordFieldType(ctx: RecordFieldTypeContext): Type {
         TODO("Not yet implemented")
     }
 
-    override fun visitVariantFieldType(ctx: VariantFieldTypeContext): Type? {
+    override fun visitVariantFieldType(ctx: VariantFieldTypeContext): Type {
         TODO("Not yet implemented")
     }
 }
