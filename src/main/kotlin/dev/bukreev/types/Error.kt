@@ -1,12 +1,15 @@
 package dev.bukreev.types
 
 import dev.bukreev.types.parsing.stellaParser.*
+import org.antlr.v4.runtime.RuleContext
+import kotlin.system.exitProcess
 
 sealed interface Error {
     fun stringify(): String
     
     fun report(): Nothing {
-        TODO()
+        System.err.println(stringify())
+        exitProcess(1)
     }
 }
 
@@ -16,9 +19,15 @@ data object ErrorMissingMain : Error {
     }
 }
 
-data object ErrorUndefinedVariable : Error {
+data class ErrorUndefinedVariable(val varName: String, val parentExpression: RuleContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+            ERROR_UNDEFINED_VARIABLE:
+              в выражении
+                ${parentExpression.toStringTree()}
+              содержится необъявленная переменная
+                $varName
+        """.trimIndent()
     }
 }
 
@@ -31,7 +40,7 @@ data class ErrorUnexpectedTypeForExpression(val expected: Type, val actual: Type
              но получен тип
                $actual
              для выражения
-               ${expression.text}
+               ${expression.toStringTree()}
        """.trimIndent()
     }
 }

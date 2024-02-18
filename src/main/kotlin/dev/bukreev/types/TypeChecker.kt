@@ -7,7 +7,7 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class TypeChecker : stellaParserVisitor<Type?> {
+class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type?> {
     override fun visit(tree: ParseTree): Type? {
         TODO("Not yet implemented")
     }
@@ -48,8 +48,18 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitDeclFun(ctx: DeclFunContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitDeclFun(ctx: DeclFunContext): Type {
+        val param = ctx.paramDecl
+        val paramType = param.paramType.accept(this)!!
+        val returnType = ctx.returnType.accept(this)!!
+        return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
+            val returnExpressionType = ctx.returnExpr.accept(this)!!
+            if (!isUnifiable(returnType, returnExpressionType)) {
+                ErrorUnexpectedTypeForExpression(returnType, returnExpressionType, ctx.returnExpr).report()
+            }
+
+            FuncType(paramType, returnType)
+        }
     }
 
     override fun visitDeclFunGeneric(ctx: DeclFunGenericContext): Type? {
@@ -93,8 +103,10 @@ class TypeChecker : stellaParserVisitor<Type?> {
         return BoolType
     }
 
-    override fun visitVar(ctx: VarContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitVar(ctx: VarContext): Type {
+        val varName = ctx.name.text
+
+        return typesContext.getType(varName) ?: ErrorUndefinedVariable(varName, ctx.parent).report()
     }
 
     override fun visitTypeAbstraction(ctx: TypeAbstractionContext): Type? {
@@ -411,8 +423,8 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeBool(ctx: TypeBoolContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitTypeBool(ctx: TypeBoolContext): Type {
+        return BoolType
     }
 
     override fun visitTypeRef(ctx: TypeRefContext): Type? {
