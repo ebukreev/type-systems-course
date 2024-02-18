@@ -37,7 +37,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitProgram(ctx: ProgramContext): Type? {
-        TODO("Not yet implemented")
+        if (!ctx.decls.any { it is DeclFunContext && it.name.text == "main" }) {
+            ErrorMissingMain.report()
+        }
+
+        ctx.decls.forEach { it.accept(this) }
+        return null
     }
 
     override fun visitLanguageCore(ctx: LanguageCoreContext): Type? {

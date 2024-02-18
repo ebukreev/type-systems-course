@@ -15,7 +15,10 @@ sealed interface Error {
 
 data object ErrorMissingMain : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+            ERROR_MISSING_MAIN:
+              в программе отсутствует функция main
+        """.trimIndent()
     }
 }
 
