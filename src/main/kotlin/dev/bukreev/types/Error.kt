@@ -1,49 +1,147 @@
 package dev.bukreev.types
 
-enum class Error {
-    ERROR_MISSING_MAIN,
+sealed interface Error {
+    fun stringify(): String
+    
+    fun report(): Nothing {
+        TODO()
+    }
+}
 
-    ERROR_UNDEFINED_VARIABLE,
+data object ErrorMissingMain : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_TYPE_FOR_EXPRESSION,
+data object ErrorUndefinedVariable : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_NOT_A_FUNCTION,
+data object ErrorUnexpectedTypeForExpression : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_NOT_A_TUPLE,
+data object ErrorNotAFunction : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_NOT_A_RECORD,
+data object ErrorNotATuple : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_NOT_A_LIST,
+data object ErrorNotARecord : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_LAMBDA,
+data object ErrorNotAList : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_TYPE_FOR_PARAMETER,
+data object ErrorUnexpectedLambda : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_TUPLE,
+data object ErrorUnexpectedTypeForParameter : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_RECORD,
+data object ErrorUnexpectedTuple : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_LIST,
+data object ErrorUnexpectedRecord : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_INJECTION,
+data object ErrorUnexpectedList : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_MISSING_RECORD_FIELDS,
+data object ErrorUnexpectedInjection : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_RECORD_FIELDS,
+data object ErrorMissingRecordFields : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_FIELD_ACCESS,
+data object ErrorUnexpectedRecordFields : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_TUPLE_INDEX_OUT_OF_BOUNDS,
+data object ErrorUnexpectedFieldAccess : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_TUPLE_LENGTH,
+data object ErrorTupleIndexOfBounds : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_AMBIGUOUS_SUM_TYPE,
+data object ErrorUnexpectedTupleLength : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_AMBIGUOUS_LIST,
+data object ErrorAmbiguousSumType : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_ILLEGAL_EMPTY_MATCHING,
+data object ErrorAmbiguousList : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_NONEXHAUSTIVE_MATCH_PATTERNS,
+data object ErrorIllegalEmptyMatching : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
 
-    ERROR_UNEXPECTED_PATTERN_FOR_TYPE
+data object ErrorNonexhaustiveMatchPatterns : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
+}
+
+data object ErrorUnexpectedPatternForType : Error {
+    override fun stringify(): String {
+        TODO("Not yet implemented")
+    }
 }
