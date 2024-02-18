@@ -60,13 +60,16 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         val param = ctx.paramDecl
         val paramType = param.paramType.accept(this)
         val returnType = ctx.returnType.accept(this)
+        val funcType = FuncType(paramType, returnType)
+
+        typesContext.addTypeInfo(ctx.name.text, funcType)
         return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
             val returnExpressionType = ctx.returnExpr.accept(this)
             if (!isUnifiable(returnType, returnExpressionType)) {
                 ErrorUnexpectedTypeForExpression(returnType, returnExpressionType, ctx.returnExpr).report()
             }
 
-            FuncType(paramType, returnType)
+            funcType
         }
     }
 

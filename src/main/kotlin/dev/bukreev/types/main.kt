@@ -9,30 +9,19 @@ import org.antlr.v4.runtime.CommonTokenStream
 fun main() {
     val exampleStellaCode = """
         language core;
-
-        // addition of natural numbers
-        fn Nat::add(n : Nat) -> fn(Nat) -> Nat {
-          return fn(m : Nat) {
-            return Nat::rec(n, m, fn(i : Nat) {
-              return fn(r : Nat) {
-                return succ( r ); // r := r + 1
-              };
-            });
-          };
+        fn Bool::not(b : Bool) -> Bool {
+            return
+                if b then false else true
         }
-
-        // square, computed as a sum of odd numbers
-        fn square(n : Nat) -> Nat {
-          return Nat::rec(n, 0, fn(i : Nat) {
-              return fn(r : Nat) {
-                // r := r + (2*i + 1)
-                return Nat::add(i)( Nat::add(i)( succ( r )));
-              };
-          });
+        
+        fn twice(f : fn(Bool) -> Bool) -> (fn(Bool) -> Bool) {
+            return fn(x : Bool) {
+                return f(f(x))
+            }
         }
-
-        fn main(n : Nat) -> Nat {
-          return square(n);
+        
+        fn main(b : Bool) -> Bool {
+            return twice(Bool::not)(b)
         }
     """.trimIndent()
 
@@ -41,5 +30,5 @@ fun main() {
     val parser = stellaParser(tokens)
     val tree = parser.program()
 
-    println(tree.decl().size)
+    println(tree.accept(TypeChecker()))
 }

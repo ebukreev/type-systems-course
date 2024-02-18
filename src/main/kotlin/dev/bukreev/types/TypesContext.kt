@@ -16,7 +16,7 @@ class TypesContext {
         }
     }
 
-    private fun addTypeInfo(variable: String, type: Type) {
+    fun addTypeInfo(variable: String, type: Type) {
         (typesOfVariables.getOrPut(variable) { mutableListOf() }).add(type)
     }
 
