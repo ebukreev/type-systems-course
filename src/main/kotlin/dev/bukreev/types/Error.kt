@@ -1,5 +1,7 @@
 package dev.bukreev.types
 
+import dev.bukreev.types.parsing.stellaParser.*
+
 sealed interface Error {
     fun stringify(): String
     
@@ -20,9 +22,17 @@ data object ErrorUndefinedVariable : Error {
     }
 }
 
-data object ErrorUnexpectedTypeForExpression : Error {
+data class ErrorUnexpectedTypeForExpression(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+       return """
+           ERROR_UNEXPECTED_TYPE_FOR_EXPRESSION:
+             ожидается тип
+               $expected
+             но получен тип
+               $actual
+             для выражения
+               ${expression.text}
+       """.trimIndent()
     }
 }
 

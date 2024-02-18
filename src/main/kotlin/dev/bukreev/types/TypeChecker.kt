@@ -152,8 +152,8 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstFalse(ctx: ConstFalseContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitConstFalse(ctx: ConstFalseContext): Type {
+        return BoolType
     }
 
     override fun visitAbstraction(ctx: AbstractionContext): Type? {
@@ -168,8 +168,8 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitConstTrue(ctx: ConstTrueContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitConstTrue(ctx: ConstTrueContext): Type {
+        return BoolType
     }
 
     override fun visitSubtract(ctx: SubtractContext): Type? {
@@ -180,8 +180,20 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitIf(ctx: IfContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitIf(ctx: IfContext): Type {
+        val conditionType = ctx.condition.accept(this)
+        if (conditionType != BoolType) {
+            error(ErrorUnexpectedTypeForExpression(BoolType, conditionType, ctx))
+        }
+
+        val thenType = ctx.thenExpr.accept(this)!!
+        val elseType = ctx.elseExpr.accept(this)!!
+
+        if (!isUnifiable(thenType, elseType)) {
+            error(ErrorUnexpectedTypeForExpression(thenType, elseType, ctx))
+        }
+
+        return thenType
     }
 
     override fun visitApplication(ctx: ApplicationContext): Type? {
@@ -412,8 +424,8 @@ class TypeChecker : stellaParserVisitor<Type?> {
         TODO("Not yet implemented")
     }
 
-    override fun visitTypeNat(ctx: TypeNatContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitTypeNat(ctx: TypeNatContext): Type {
+        return NatType
     }
 
     override fun visitTypeBottom(ctx: TypeBottomContext): Type? {
