@@ -312,8 +312,21 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         TODO("Not yet implemented")
     }
 
-    override fun visitNatRec(ctx: NatRecContext): Type? {
-        TODO("Not yet implemented")
+    override fun visitNatRec(ctx: NatRecContext): Type {
+        val nType = ctx.n.accept(this)
+        if (nType != NatType) {
+            ErrorUnexpectedTypeForExpression(NatType, nType, ctx).report()
+        }
+
+        val zType = ctx.initial.accept(this)!!
+        val sType = ctx.step.accept(this)!!
+
+        val expectedSType = FuncType(NatType, FuncType(zType, zType))
+        if (!isUnifiable(expectedSType, sType)) {
+            ErrorUnexpectedTypeForExpression(expectedSType, sType, ctx).report()
+        }
+
+        return zType
     }
 
     override fun visitUnfold(ctx: UnfoldContext): Type? {
