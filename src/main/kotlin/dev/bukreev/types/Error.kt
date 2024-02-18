@@ -79,15 +79,31 @@ data object ErrorNotAList : Error {
     }
 }
 
-data object ErrorUnexpectedLambda : Error {
+data class ErrorUnexpectedLambda(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_LAMBDA:
+             ожидается не функциональный тип
+               $expected
+             но получен функциональный тип
+               $actual
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
-data object ErrorUnexpectedTypeForParameter : Error {
+data class ErrorUnexpectedTypeForParameter(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_TYPE_FOR_PARAMETER:
+             парметр ожидаемого типа
+               $expected
+             не соответствует актуальному
+               $actual
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
@@ -173,4 +189,16 @@ data object ErrorUnexpectedPatternForType : Error {
     override fun stringify(): String {
         TODO("Not yet implemented")
     }
+}
+
+fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext): Nothing {
+    if (expected !is FuncType && actual is FuncType) {
+        ErrorUnexpectedLambda(expected, actual, expression).report()
+    }
+
+    if (expected is FuncType && actual is FuncType && !isUnifiable(expected.argType, actual.argType)) {
+        ErrorUnexpectedTypeForParameter(expected, actual, expression).report()
+    }
+
+    ErrorUnexpectedTypeForExpression(expected, actual, expression).report()
 }

@@ -66,7 +66,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
             val returnExpressionType = ctx.returnExpr.accept(this)
             if (!isUnifiable(returnType, returnExpressionType)) {
-                ErrorUnexpectedTypeForExpression(returnType, returnExpressionType, ctx.returnExpr).report()
+                reportUnexpectedType(returnType, returnExpressionType, ctx.returnExpr)
             }
 
             funcType
@@ -108,7 +108,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitIsZero(ctx: IsZeroContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report()
+            reportUnexpectedType(NatType, argType, ctx)
         }
 
         return BoolType
@@ -217,14 +217,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitIf(ctx: IfContext): Type {
         val conditionType = ctx.condition.accept(this)
         if (conditionType != BoolType) {
-            ErrorUnexpectedTypeForExpression(BoolType, conditionType, ctx).report()
+            reportUnexpectedType(BoolType, conditionType, ctx)
         }
 
         val thenType = ctx.thenExpr.accept(this)
         val elseType = ctx.elseExpr.accept(this)
 
         if (!isUnifiable(thenType, elseType)) {
-            ErrorUnexpectedTypeForExpression(thenType, elseType, ctx).report()
+            reportUnexpectedType(thenType, elseType, ctx)
         }
 
         return thenType
@@ -239,7 +239,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         }
 
         if (!isUnifiable(funType.argType, exprType)) {
-            ErrorUnexpectedTypeForExpression(funType.argType, exprType, ctx).report()
+            reportUnexpectedType(funType.argType, exprType, ctx)
         }
 
         return funType.returnType
@@ -264,7 +264,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitSucc(ctx: SuccContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report()
+            reportUnexpectedType(NatType, argType, ctx)
         }
 
         return NatType
@@ -325,7 +325,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitPred(ctx: PredContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report()
+            reportUnexpectedType(NatType, argType, ctx)
         }
 
         return NatType
@@ -338,7 +338,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitNatRec(ctx: NatRecContext): Type {
         val nType = ctx.n.accept(this)
         if (nType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, nType, ctx).report()
+            reportUnexpectedType(NatType, nType, ctx)
         }
 
         val zType = ctx.initial.accept(this)
@@ -346,7 +346,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
         val expectedSType = FuncType(NatType, FuncType(zType, zType))
         if (!isUnifiable(expectedSType, sType)) {
-            ErrorUnexpectedTypeForExpression(expectedSType, sType, ctx).report()
+            reportUnexpectedType(expectedSType, sType, ctx)
         }
 
         return zType
