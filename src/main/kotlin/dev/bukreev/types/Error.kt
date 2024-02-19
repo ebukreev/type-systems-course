@@ -61,9 +61,16 @@ data class ErrorNotAFunction(val expression: ExprContext, val type: Type) : Erro
     }
 }
 
-data object ErrorNotATuple : Error {
+data class ErrorNotATuple(val expression: ExprContext, val type: Type) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_NOT_A_TUPLE:
+             для выражения
+               ${expression.toStringTree()}
+             ожидается тип кортежа
+             но получен тип
+               $type
+       """.trimIndent()
     }
 }
 
@@ -107,9 +114,17 @@ data class ErrorUnexpectedTypeForParameter(val expected: Type, val actual: Type?
     }
 }
 
-data object ErrorUnexpectedTuple : Error {
+data class ErrorUnexpectedTuple(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_TUPLE:
+             ожидается не тип кортежа
+               $expected
+             но получен тип кортежа
+               $actual
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
@@ -149,15 +164,31 @@ data object ErrorUnexpectedFieldAccess : Error {
     }
 }
 
-data object ErrorTupleIndexOfBounds : Error {
+data class ErrorTupleIndexOfBounds(val expression: ExprContext, val index: Int) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_TUPLE_INDEX_OUT_OF_BOUNDS:
+             в выражении
+               ${expression.toStringTree()}
+             осуществляется попытка извлечь отсутствующий компонент кортежа
+               ${index + 1}
+       """.trimIndent()
     }
 }
 
-data object ErrorUnexpectedTupleLength : Error {
+data class ErrorUnexpectedTupleLength(val expected: TupleType, val actual: TupleType, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_TUPLE_LENGTH:
+             ожидается кортеж
+               $expected
+             с длинной ${expected.types.size}
+             но получен тип кортежа
+               $actual
+             с длинной ${actual.types.size}
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
@@ -198,6 +229,14 @@ fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext)
 
     if (expected is FuncType && actual is FuncType && !isUnifiable(expected.argType, actual.argType)) {
         ErrorUnexpectedTypeForParameter(expected, actual, expression).report()
+    }
+
+    if (expected !is TupleType && actual is TupleType) {
+        ErrorUnexpectedTuple(expected, actual, expression).report()
+    }
+
+    if (expected is TupleType && actual is TupleType && expected.types.size != actual.types.size) {
+        ErrorUnexpectedTupleLength(expected, actual, expression).report()
     }
 
     ErrorUnexpectedTypeForExpression(expected, actual, expression).report()

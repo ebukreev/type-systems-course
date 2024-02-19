@@ -44,6 +44,7 @@ class TypeCheckBadTest {
             try {
                 buffer = StringBuilder()
                 Parser.parse(it.readText()).accept(TypeChecker())
+                assert(false) { it.toString() }
             } catch (e: ExitException) {
                 assertEquals(e.status, 1)
                 assertContains(buffer.toString(), it.parent.name, message = it.toString())

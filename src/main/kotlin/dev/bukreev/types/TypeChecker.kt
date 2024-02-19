@@ -361,7 +361,17 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitDotTuple(ctx: DotTupleContext): Type {
-        TODO("Not yet implemented")
+        val tupleType = ctx.expr().accept(this)
+        if (tupleType !is TupleType) {
+            ErrorNotATuple(ctx, tupleType).report()
+        }
+
+        val index = ctx.index.text.toInt() - 1
+        if (tupleType.types.size <= index) {
+            ErrorTupleIndexOfBounds(ctx, index).report()
+        }
+
+        return tupleType.types[ctx.index.text.toInt() - 1]
     }
 
     override fun visitFix(ctx: FixContext): Type {
@@ -377,7 +387,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTuple(ctx: TupleContext): Type {
-        TODO("Not yet implemented")
+        return TupleType(ctx.exprs.map { it.accept(this) })
     }
 
     override fun visitConsList(ctx: ConsListContext): Type {
@@ -457,7 +467,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeTuple(ctx: TypeTupleContext): Type {
-        TODO("Not yet implemented")
+        return TupleType(ctx.types.map { it.accept(this) })
     }
 
     override fun visitTypeTop(ctx: TypeTopContext): Type {

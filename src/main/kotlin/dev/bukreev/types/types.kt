@@ -26,6 +26,12 @@ data object UnitType : Type {
     }
 }
 
+data class TupleType(val types: List<Type>) : Type {
+    override fun toString(): String {
+        return "{${types.joinToString(separator = ", ")}}"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }
