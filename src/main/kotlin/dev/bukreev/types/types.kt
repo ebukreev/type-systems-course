@@ -20,6 +20,12 @@ data class FuncType(val argType: Type, val returnType: Type) : Type {
     }
 }
 
+data object UnitType : Type {
+    override fun toString(): String {
+        return "Unit"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }

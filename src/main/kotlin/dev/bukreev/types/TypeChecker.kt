@@ -173,7 +173,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitConstUnit(ctx: ConstUnitContext): Type {
-        TODO("Not yet implemented")
+        return UnitType
     }
 
     override fun visitSequence(ctx: SequenceContext): Type {
@@ -489,7 +489,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeUnit(ctx: TypeUnitContext): Type {
-        TODO("Not yet implemented")
+        return UnitType
     }
 
     override fun visitTypeNat(ctx: TypeNatContext): Type {
