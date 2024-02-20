@@ -32,6 +32,12 @@ data class TupleType(val types: List<Type>) : Type {
     }
 }
 
+data class RecordType(val fields: List<Pair<String, Type>>) : Type {
+    override fun toString(): String {
+        return "{${fields.joinToString(separator = ", ") { "${it.first} : ${it.second}" }}}"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }

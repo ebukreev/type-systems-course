@@ -133,7 +133,15 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitDotRecord(ctx: DotRecordContext): Type {
-        TODO("Not yet implemented")
+        val exprType = ctx.expr().accept(this)
+        if (exprType !is RecordType) {
+            ErrorNotARecord(ctx.expr(), exprType).report()
+        }
+
+        val fieldTypeInfo = exprType.fields.firstOrNull { it.first == ctx.label.text }
+            ?: ErrorUnexpectedFieldAccess(exprType, ctx, ctx.label.text).report()
+
+        return fieldTypeInfo.second
     }
 
     override fun visitGreaterThan(ctx: GreaterThanContext): Type {
@@ -299,7 +307,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitRecord(ctx: RecordContext): Type {
-        TODO("Not yet implemented")
+        val fields = mutableListOf<Pair<String, Type>>()
+        for (binding in ctx.bindings) {
+            fields.add(Pair(binding.name.text, binding.rhs.accept(this)))
+        }
+
+        return RecordType(fields)
     }
 
     override fun visitLogicAnd(ctx: LogicAndContext): Type {
@@ -526,7 +539,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeRecord(ctx: TypeRecordContext): Type {
-        TODO("Not yet implemented")
+        val fields = mutableListOf<Pair<String, Type>>()
+        for (field in ctx.fieldTypes) {
+            fields.add(Pair(field.label.text, field.stellatype().accept(this)))
+        }
+
+        return RecordType(fields)
     }
 
     override fun visitTypeList(ctx: TypeListContext): Type {

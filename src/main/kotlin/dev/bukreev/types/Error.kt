@@ -74,9 +74,16 @@ data class ErrorNotATuple(val expression: ExprContext, val type: Type) : Error {
     }
 }
 
-data object ErrorNotARecord : Error {
+data class ErrorNotARecord(val expression: ExprContext, val type: Type) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_NOT_A_RECORD:
+             для выражения
+               ${expression.toStringTree()}
+             ожидается тип записи
+             но получен тип
+               $type
+       """.trimIndent()
     }
 }
 
@@ -128,9 +135,17 @@ data class ErrorUnexpectedTuple(val expected: Type, val actual: Type?, val expre
     }
 }
 
-data object ErrorUnexpectedRecord : Error {
+data class ErrorUnexpectedRecord(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_RECORD:
+             ожидается не тип записи
+               $expected
+             но получен тип записи
+               $actual
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
@@ -146,21 +161,49 @@ data object ErrorUnexpectedInjection : Error {
     }
 }
 
-data object ErrorMissingRecordFields : Error {
+data class ErrorMissingRecordFields(val expected: RecordType, val actual: RecordType, val expression: ExprContext,
+                                    val fields: Set<Pair<String, Type>>) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_MISSING_RECORD_FIELDS:
+             ожидается тип записи
+               $expected
+             но получен тип записи
+               $actual
+             в котором нет полей ${fields.joinToString(separator = ", ") { "${it.first} : ${it.second}" }}
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
-data object ErrorUnexpectedRecordFields : Error {
+data class ErrorUnexpectedRecordFields(val expected: RecordType, val actual: RecordType, val expression: ExprContext,
+                                        val fields: Set<Pair<String, Type>>) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_RECORD_FIELDS:
+             ожидается тип записи
+               $expected
+             но получен тип записи
+               $actual
+             в котором есть лишние поля ${fields.joinToString(separator = ", ") { "${it.first} : ${it.second}" }}
+             для выражения
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
-data object ErrorUnexpectedFieldAccess : Error {
+data class ErrorUnexpectedFieldAccess(val recordType: RecordType, val expression: ExprContext, val label: String) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_FIELD_ACCESS:
+             попытка извлечь отсутствующее поле записи
+               $label
+             для типа записи
+               $recordType
+             в выражении
+               ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
@@ -237,6 +280,22 @@ fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext)
 
     if (expected is TupleType && actual is TupleType && expected.types.size != actual.types.size) {
         ErrorUnexpectedTupleLength(expected, actual, expression).report()
+    }
+
+    if (expected !is RecordType && actual is RecordType) {
+        ErrorUnexpectedRecord(expected, actual, expression).report()
+    }
+
+    if (expected is RecordType && actual is RecordType) {
+        val missingFields = expected.fields.subtract(actual.fields.toSet())
+        if (missingFields.isNotEmpty()) {
+            ErrorMissingRecordFields(expected, actual, expression, missingFields).report()
+        }
+
+        val unexpectedFields = actual.fields.subtract(expected.fields.toSet())
+        if (unexpectedFields.isNotEmpty()) {
+            ErrorUnexpectedRecordFields(expected, actual, expression, unexpectedFields).report()
+        }
     }
 
     ErrorUnexpectedTypeForExpression(expected, actual, expression).report()
