@@ -392,7 +392,13 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitLet(ctx: LetContext): Type {
-        TODO("Not yet implemented")
+        val patternBinding = ctx.patternBinding
+        val patternBindingType = patternBinding.expr().accept(this)
+        val patternBindingName = (patternBinding.pattern() as PatternVarContext).name.text
+
+        return typesContext.runWithTypeInfo(patternBindingName, patternBindingType) {
+            ctx.expr().accept(this)
+        }
     }
 
     override fun visitAssign(ctx: AssignContext): Type {
