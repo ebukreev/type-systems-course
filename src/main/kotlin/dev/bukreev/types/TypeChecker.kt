@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.tree.ErrorNode
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
+import kotlin.io.path.createTempDirectory
 
 class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
@@ -345,7 +346,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeAsc(ctx: TypeAscContext): Type {
-        TODO("Not yet implemented")
+        val expectedType = ctx.stellatype().accept(this)
+        val expressionType = ctx.expr().accept(this)
+
+        if (!isUnifiable(expectedType, expressionType)) {
+            reportUnexpectedType(expectedType, expressionType, ctx)
+        }
+
+        return expectedType
     }
 
     override fun visitNatRec(ctx: NatRecContext): Type {
