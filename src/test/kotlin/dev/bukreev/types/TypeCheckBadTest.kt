@@ -48,8 +48,7 @@ class TypeCheckBadTest {
                 assert(false) { it.toString() }
             } catch (e: ExitException) {
                 assertEquals(e.status, 1)
-                val errorType = it.readLines().first().substringAfter("//").substringBefore(",").trim()
-                assertContains(buffer.toString(), errorType, message = it.toString())
+                assertContains(buffer.toString(), it.parent.name, message = it.toString())
             }
         }
     }
