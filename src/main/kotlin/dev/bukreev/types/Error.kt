@@ -287,14 +287,14 @@ fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext)
     }
 
     if (expected is RecordType && actual is RecordType) {
-        val missingFields = expected.fields.subtract(actual.fields.toSet())
-        if (missingFields.isNotEmpty()) {
-            ErrorMissingRecordFields(expected, actual, expression, missingFields).report()
-        }
-
         val unexpectedFields = actual.fields.subtract(expected.fields.toSet())
         if (unexpectedFields.isNotEmpty()) {
             ErrorUnexpectedRecordFields(expected, actual, expression, unexpectedFields).report()
+        }
+
+        val missingFields = expected.fields.subtract(actual.fields.toSet())
+        if (missingFields.isNotEmpty()) {
+            ErrorMissingRecordFields(expected, actual, expression, missingFields).report()
         }
     }
 
