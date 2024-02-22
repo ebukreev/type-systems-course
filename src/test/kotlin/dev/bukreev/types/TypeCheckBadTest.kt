@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.security.Permission
 import kotlin.io.path.name
+import kotlin.io.path.readLines
 import kotlin.io.path.readText
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -47,7 +48,8 @@ class TypeCheckBadTest {
                 assert(false) { it.toString() }
             } catch (e: ExitException) {
                 assertEquals(e.status, 1)
-                assertContains(buffer.toString(), it.parent.name, message = it.toString())
+                val errorType = it.readLines().first().substringAfter("//").substringBefore(",").trim()
+                assertContains(buffer.toString(), errorType, message = it.toString())
             }
         }
     }
