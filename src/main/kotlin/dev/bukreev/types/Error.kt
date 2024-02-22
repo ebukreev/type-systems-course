@@ -155,9 +155,15 @@ data object ErrorUnexpectedList : Error {
     }
 }
 
-data object ErrorUnexpectedInjection : Error {
+data class ErrorUnexpectedInjection(val expectedType: Type, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_INJECTION:
+             получена инъекция 
+               ${expression.toStringTree()}
+             но ожидается не тип-сумма
+               $expectedType
+       """.trimIndent()
     }
 }
 
@@ -235,9 +241,15 @@ data class ErrorUnexpectedTupleLength(val expected: TupleType, val actual: Tuple
     }
 }
 
-data object ErrorAmbiguousSumType : Error {
+data class ErrorAmbiguousSumType(val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_AMBIGUOUS_SUM_TYPE:
+             тип инъекции
+               ${expression.toStringTree()}
+             невозможно определить 
+             в данном контексте отсутсвует ожидаемый тип-сумма
+       """.trimIndent()
     }
 }
 
@@ -247,21 +259,38 @@ data object ErrorAmbiguousList : Error {
     }
 }
 
-data object ErrorIllegalEmptyMatching : Error {
+data class ErrorIllegalEmptyMatching(val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_ILLEGAL_EMPTY_MATCHING:
+             match выражение
+                ${expression.toStringTree()}
+             с пустым списком альтернатив
+       """.trimIndent()
     }
 }
 
-data object ErrorNonexhaustiveMatchPatterns : Error {
+data class ErrorNonexhaustiveMatchPatterns(val expectedType: Type, val expression: ExprContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_NONEXHAUSTIVE_MATCH_PATTERNS:
+             не все образцы для типа
+                $expectedType
+             перечислены в выражении
+                ${expression.toStringTree()}
+       """.trimIndent()
     }
 }
 
-data object ErrorUnexpectedPatternForType : Error {
+data class ErrorUnexpectedPatternForType(val type: Type?, val pattern: PatternContext) : Error {
     override fun stringify(): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_PATTERN_FOR_TYPE:
+             образец
+                ${pattern.toStringTree()}
+             не соответствует типу разбираемого выражения
+                $type
+       """.trimIndent()
     }
 }
 

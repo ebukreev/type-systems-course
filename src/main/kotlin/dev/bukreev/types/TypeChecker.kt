@@ -6,7 +6,6 @@ import org.antlr.v4.runtime.tree.ErrorNode
 import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
-import kotlin.io.path.createTempDirectory
 
 class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
@@ -65,12 +64,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
         typesContext.addTypeInfo(ctx.name.text, funcType)
         return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
-            val returnExpressionType = ctx.returnExpr.accept(this)
-            if (!isUnifiable(returnType, returnExpressionType)) {
-                reportUnexpectedType(returnType, returnExpressionType, ctx.returnExpr)
-            }
+            typesContext.runWithExpectedType(returnType) {
+                val returnExpressionType = ctx.returnExpr.accept(this)
+                if (!isUnifiable(returnType, returnExpressionType)) {
+                    reportUnexpectedType(returnType, returnExpressionType, ctx.returnExpr)
+                }
 
-            funcType
+                funcType
+            }
         }
     }
 
@@ -241,12 +242,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
     override fun visitApplication(ctx: ApplicationContext): Type {
         val funType = ctx.`fun`.accept(this)
-        val exprType = ctx.expr.accept(this)
 
         if (funType !is FuncType) {
             ErrorNotAFunction(ctx.`fun`, funType).report()
         }
 
+        val exprType = typesContext.runWithExpectedType(funType.argType) { ctx.expr.accept(this) }
         if (!isUnifiable(funType.argType, exprType)) {
             reportUnexpectedType(funType.argType, exprType, ctx)
         }
@@ -280,7 +281,13 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitInl(ctx: InlContext): Type {
-        TODO("Not yet implemented")
+        val leftType = ctx.expr().accept(this)
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report()
+        if (expectedType !is SumType) {
+            ErrorUnexpectedInjection(expectedType, ctx).report()
+        }
+
+        return SumType(leftType, expectedType.inr)
     }
 
     override fun visitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext): Type {
@@ -288,11 +295,42 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitInr(ctx: InrContext): Type {
-        TODO("Not yet implemented")
+        val rightType = ctx.expr().accept(this)
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report()
+        if (expectedType !is SumType) {
+            ErrorUnexpectedInjection(expectedType, ctx).report()
+        }
+
+        return SumType(expectedType.inl, rightType)
     }
 
     override fun visitMatch(ctx: MatchContext): Type {
-        TODO("Not yet implemented")
+        val expressionType = ctx.expr().accept(this)
+        val cases = ctx.cases
+        if (cases.isEmpty()) {
+            ErrorIllegalEmptyMatching(ctx).report()
+        }
+
+        if (expressionType is SumType) {
+            val isExhaustive = cases.any { it.pattern() is PatternVarContext } ||
+                    cases.any { it.pattern() is PatternInlContext } && cases.any { it.pattern() is PatternInrContext }
+            if (!isExhaustive) {
+                ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report()
+            }
+        }
+
+        return typesContext.runWithExpectedType(expressionType) {
+            val casesType = cases.first().accept(this)
+
+            cases.drop(1).forEach {
+                val caseType = it.accept(this)
+                if (!isUnifiable(casesType, caseType)) {
+                    reportUnexpectedType(casesType, caseType, ctx)
+                }
+            }
+
+            casesType
+        }
     }
 
     override fun visitLogicNot(ctx: LogicNotContext): Type {
@@ -347,7 +385,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
     override fun visitTypeAsc(ctx: TypeAscContext): Type {
         val expectedType = ctx.stellatype().accept(this)
-        val expressionType = ctx.expr().accept(this)
+        val expressionType = typesContext.runWithExpectedType(expectedType) { ctx.expr().accept(this) }
 
         if (!isUnifiable(expectedType, expressionType)) {
             reportUnexpectedType(expectedType, expressionType, ctx)
@@ -430,6 +468,31 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitMatchCase(ctx: MatchCaseContext): Type {
+        val pattern = ctx.pattern()
+        val expectedType = typesContext.getExpectedType()!!
+        if (pattern is PatternVarContext) {
+            return typesContext.runWithTypeInfo(pattern.name.text, expectedType) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternInlContext) {
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+            expectedType as? SumType ?:
+                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report()
+
+            return typesContext.runWithTypeInfo(patternName, expectedType.inl) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternInrContext) {
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+            expectedType as? SumType ?:
+                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report()
+
+            return typesContext.runWithTypeInfo(patternName, expectedType.inr) {
+                ctx.expr().accept(this)
+            }
+        }
         TODO("Not yet implemented")
     }
 
@@ -514,7 +577,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeSum(ctx: TypeSumContext): Type {
-        TODO("Not yet implemented")
+        return SumType(ctx.left.accept(this), ctx.right.accept(this))
     }
 
     override fun visitTypeVar(ctx: TypeVarContext): Type {

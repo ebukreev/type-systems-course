@@ -38,6 +38,12 @@ data class RecordType(val fields: List<Pair<String, Type>>) : Type {
     }
 }
 
+data class SumType(val inl: Type, val inr: Type) : Type {
+    override fun toString(): String {
+        return "$inl + $inr"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }
