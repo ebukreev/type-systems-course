@@ -1,4 +1,4 @@
-// Generated from ./grammar/stellaLexer.g4 by ANTLR 4.13.1
+// Generated from ./stellaLexer.g4 by ANTLR 4.13.1
 package dev.bukreev.types.parsing;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;

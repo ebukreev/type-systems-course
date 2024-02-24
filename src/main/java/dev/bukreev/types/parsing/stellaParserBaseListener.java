@@ -1,4 +1,4 @@
-// Generated from ./grammar/stellaParser.g4 by ANTLR 4.13.1
+// Generated from stellaParser.g4 by ANTLR 4.13.1
 package dev.bukreev.types.parsing;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -360,6 +360,18 @@ public class stellaParserBaseListener implements stellaParserListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitHead(stellaParser.HeadContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterTerminatingSemicolon(stellaParser.TerminatingSemicolonContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitTerminatingSemicolon(stellaParser.TerminatingSemicolonContext ctx) { }
 	/**
 	 * {@inheritDoc}
 	 *
