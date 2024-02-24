@@ -101,14 +101,13 @@ data class ErrorNotAList(val expression: ExprContext, val type: Type) : Error {
     }
 }
 
-data class ErrorUnexpectedLambda(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+data class ErrorUnexpectedLambda(val expected: Type?, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_LAMBDA:
              ожидается не функциональный тип
                $expected
              но получен функциональный тип
-               $actual
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
@@ -129,42 +128,37 @@ data class ErrorUnexpectedTypeForParameter(val expected: Type, val actual: Type?
     }
 }
 
-data class ErrorUnexpectedTuple(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+data class ErrorUnexpectedTuple(val expected: Type?, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_TUPLE:
              ожидается не тип кортежа
                $expected
              но получен тип кортежа
-               $actual
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
     }
 }
 
-data class ErrorUnexpectedRecord(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+data class ErrorUnexpectedRecord(val expected: Type?, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_RECORD:
              ожидается не тип записи
                $expected
-             но получен тип записи
-               $actual
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
     }
 }
 
-data class ErrorUnexpectedList(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+data class ErrorUnexpectedList(val expected: Type?, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_LIST:
              ожидается не тип списка
                $expected
-             но получен тип списка
-               $actual
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
@@ -183,12 +177,12 @@ data class ErrorUnexpectedInjection(val expectedType: Type, val expression: Expr
     }
 }
 
-data class ErrorMissingRecordFields(val expected: RecordType, val actual: RecordType, val expression: ExprContext,
+data class ErrorMissingRecordFields(val expected: Type?, val actual: RecordType, val expression: ExprContext,
                                     val fields: Set<Pair<String, Type>>) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_MISSING_RECORD_FIELDS:
-             ожидается тип записи
+             ожидается тип
                $expected
              но получен тип записи
                $actual
@@ -199,12 +193,12 @@ data class ErrorMissingRecordFields(val expected: RecordType, val actual: Record
     }
 }
 
-data class ErrorUnexpectedRecordFields(val expected: RecordType, val actual: RecordType, val expression: ExprContext,
+data class ErrorUnexpectedRecordFields(val expected: Type?, val actual: RecordType, val expression: ExprContext,
                                         val fields: Set<Pair<String, Type>>) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_RECORD_FIELDS:
-             ожидается тип записи
+             ожидается тип
                $expected
              но получен тип записи
                $actual
@@ -241,16 +235,13 @@ data class ErrorTupleIndexOfBounds(val expression: ExprContext, val index: Int) 
     }
 }
 
-data class ErrorUnexpectedTupleLength(val expected: TupleType, val actual: TupleType, val expression: ExprContext) : Error {
+data class ErrorUnexpectedTupleLength(val expected: TupleType, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_TUPLE_LENGTH:
              ожидается кортеж
                $expected
              с длинной ${expected.types.size}
-             но получен тип кортежа
-               $actual
-             с длинной ${actual.types.size}
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
@@ -314,44 +305,4 @@ data class ErrorUnexpectedPatternForType(val type: Type?, val pattern: PatternCo
                 $type
        """.trimIndent()
     }
-}
-
-fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext, parser: stellaParser): Nothing {
-    if (expected !is FuncType && actual is FuncType) {
-        ErrorUnexpectedLambda(expected, actual, expression).report(parser)
-    }
-
-    if (expected is FuncType && actual is FuncType && !isUnifiable(expected.argType, actual.argType)) {
-        ErrorUnexpectedTypeForParameter(expected, actual, expression).report(parser)
-    }
-
-    if (expected !is TupleType && actual is TupleType) {
-        ErrorUnexpectedTuple(expected, actual, expression).report(parser)
-    }
-
-    if (expected is TupleType && actual is TupleType && expected.types.size != actual.types.size) {
-        ErrorUnexpectedTupleLength(expected, actual, expression).report(parser)
-    }
-
-    if (expected !is RecordType && actual is RecordType) {
-        ErrorUnexpectedRecord(expected, actual, expression).report(parser)
-    }
-
-    if (expected is RecordType && actual is RecordType) {
-        val unexpectedFields = actual.fields.subtract(expected.fields.toSet())
-        if (unexpectedFields.isNotEmpty()) {
-            ErrorUnexpectedRecordFields(expected, actual, expression, unexpectedFields).report(parser)
-        }
-
-        val missingFields = expected.fields.subtract(actual.fields.toSet())
-        if (missingFields.isNotEmpty()) {
-            ErrorMissingRecordFields(expected, actual, expression, missingFields).report(parser)
-        }
-    }
-
-    if (expected !is ListType && actual is ListType) {
-        ErrorUnexpectedList(expected, actual, expression).report(parser)
-    }
-
-    ErrorUnexpectedTypeForExpression(expected, actual, expression).report(parser)
 }

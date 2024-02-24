@@ -17,7 +17,7 @@ class TypesContext {
         try {
             return action()
         } finally {
-            expectedTypes.dropLast(1)
+            expectedTypes.removeLast()
         }
     }
 
