@@ -6,11 +6,10 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 
 object Parser {
-    fun parse(text: String): stellaParser.ProgramContext {
+    fun parse(text: String): stellaParser {
         val lexer = stellaLexer(CharStreams.fromString(text))
         val tokens = CommonTokenStream(lexer)
-        val parser = stellaParser(tokens)
 
-        return parser.program()
+        return stellaParser(tokens)
     }
 }

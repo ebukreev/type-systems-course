@@ -10,29 +10,30 @@ fun main() {
         sb.append(line)
         line = readlnOrNull()
     }
-    Parser.parse(sb.toString()).accept(TypeChecker())
+
+    val parser = Parser.parse(sb.toString())
+    parser.program().accept(TypeChecker(parser))
 }
 
 fun debug() {
     val exampleStellaCode = """
         language core;
-        fn Bool::not(b : Bool) -> Bool {
-            return
-                if b then false else true
+        extend with #lists;
+        
+        fn nonempty(list : [Nat]) -> Bool {
+          return if List::isempty(list) then false else true
         }
         
-        fn twice(f : fn(Bool) -> Bool) -> (fn(Bool) -> Bool) {
-            return fn(x : Bool) {
-                return f(f(x))
-            }
+        fn first_or_default(list : [Nat]) -> Nat {
+          return if nonempty(list) then List::head(list) else 0
         }
         
-        fn main(b : Bool) -> Bool {
-            return twice(Bool::not)(b)
+        fn main(default : Nat) -> Nat {
+          return first_or_default([])
         }
     """.trimIndent()
 
-    val tree = Parser.parse(exampleStellaCode)
+    val parser = Parser.parse(exampleStellaCode)
 
-    println(tree.accept(TypeChecker()))
+    println(parser.program().accept(TypeChecker(parser)))
 }

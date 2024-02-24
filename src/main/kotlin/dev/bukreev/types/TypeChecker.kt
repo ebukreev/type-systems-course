@@ -1,5 +1,6 @@
 package dev.bukreev.types
 
+import dev.bukreev.types.parsing.stellaParser
 import dev.bukreev.types.parsing.stellaParser.*
 import dev.bukreev.types.parsing.stellaParserVisitor
 import org.antlr.v4.runtime.tree.ErrorNode
@@ -7,7 +8,8 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class TypeChecker(private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
+class TypeChecker(private val parser: stellaParser,
+                  private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
         TODO("Not yet implemented")
     }
@@ -45,7 +47,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
             }
         }
 
-        return mainFunctionType ?: ErrorMissingMain.report()
+        return mainFunctionType ?: ErrorMissingMain.report(parser)
     }
 
     override fun visitLanguageCore(ctx: LanguageCoreContext): Type {
@@ -67,7 +69,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
             typesContext.runWithExpectedType(returnType) {
                 val returnExpressionType = ctx.returnExpr.accept(this)
                 if (!isUnifiable(returnType, returnExpressionType)) {
-                    reportUnexpectedType(returnType, returnExpressionType, ctx.returnExpr)
+                    reportUnexpectedType(returnType, returnExpressionType, ctx.returnExpr, parser)
                 }
 
                 funcType
@@ -110,7 +112,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitIsZero(ctx: IsZeroContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            reportUnexpectedType(NatType, argType, ctx)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return BoolType
@@ -119,7 +121,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitVar(ctx: VarContext): Type {
         val varName = ctx.name.text
 
-        return typesContext.getType(varName) ?: ErrorUndefinedVariable(varName, ctx.parent).report()
+        return typesContext.getType(varName) ?: ErrorUndefinedVariable(varName, ctx.parent).report(parser)
     }
 
     override fun visitTypeAbstraction(ctx: TypeAbstractionContext): Type {
@@ -137,11 +139,11 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitDotRecord(ctx: DotRecordContext): Type {
         val exprType = ctx.expr().accept(this)
         if (exprType !is RecordType) {
-            ErrorNotARecord(ctx.expr(), exprType).report()
+            ErrorNotARecord(ctx.expr(), exprType).report(parser)
         }
 
         val fieldTypeInfo = exprType.fields.firstOrNull { it.first == ctx.label.text }
-            ?: ErrorUnexpectedFieldAccess(exprType, ctx, ctx.label.text).report()
+            ?: ErrorUnexpectedFieldAccess(exprType, ctx, ctx.label.text).report(parser)
 
         return fieldTypeInfo.second
     }
@@ -227,14 +229,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitIf(ctx: IfContext): Type {
         val conditionType = ctx.condition.accept(this)
         if (conditionType != BoolType) {
-            reportUnexpectedType(BoolType, conditionType, ctx)
+            reportUnexpectedType(BoolType, conditionType, ctx, parser)
         }
 
         val thenType = ctx.thenExpr.accept(this)
         val elseType = ctx.elseExpr.accept(this)
 
         if (!isUnifiable(thenType, elseType)) {
-            reportUnexpectedType(thenType, elseType, ctx)
+            reportUnexpectedType(thenType, elseType, ctx, parser)
         }
 
         return thenType
@@ -244,12 +246,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         val funType = ctx.`fun`.accept(this)
 
         if (funType !is FuncType) {
-            ErrorNotAFunction(ctx.`fun`, funType).report()
+            ErrorNotAFunction(ctx.`fun`, funType).report(parser)
         }
 
         val exprType = typesContext.runWithExpectedType(funType.argType) { ctx.expr.accept(this) }
         if (!isUnifiable(funType.argType, exprType)) {
-            reportUnexpectedType(funType.argType, exprType, ctx)
+            reportUnexpectedType(funType.argType, exprType, ctx, parser)
         }
 
         return funType.returnType
@@ -274,7 +276,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitSucc(ctx: SuccContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            reportUnexpectedType(NatType, argType, ctx)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return NatType
@@ -282,9 +284,9 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
     override fun visitInl(ctx: InlContext): Type {
         val leftType = ctx.expr().accept(this)
-        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report()
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
         if (expectedType !is SumType) {
-            ErrorUnexpectedInjection(expectedType, ctx).report()
+            ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
         return SumType(leftType, expectedType.inr)
@@ -296,9 +298,9 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
     override fun visitInr(ctx: InrContext): Type {
         val rightType = ctx.expr().accept(this)
-        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report()
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
         if (expectedType !is SumType) {
-            ErrorUnexpectedInjection(expectedType, ctx).report()
+            ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
         return SumType(expectedType.inl, rightType)
@@ -308,14 +310,14 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         val expressionType = ctx.expr().accept(this)
         val cases = ctx.cases
         if (cases.isEmpty()) {
-            ErrorIllegalEmptyMatching(ctx).report()
+            ErrorIllegalEmptyMatching(ctx).report(parser)
         }
 
         if (expressionType is SumType) {
             val isExhaustive = cases.any { it.pattern() is PatternVarContext } ||
                     cases.any { it.pattern() is PatternInlContext } && cases.any { it.pattern() is PatternInrContext }
             if (!isExhaustive) {
-                ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report()
+                ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report(parser)
             }
         }
 
@@ -325,7 +327,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
             cases.drop(1).forEach {
                 val caseType = it.accept(this)
                 if (!isUnifiable(casesType, caseType)) {
-                    reportUnexpectedType(casesType, caseType, ctx)
+                    reportUnexpectedType(casesType, caseType, ctx, parser)
                 }
             }
 
@@ -377,7 +379,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitPred(ctx: PredContext): Type {
         val argType = ctx.n.accept(this)
         if (argType != NatType) {
-            reportUnexpectedType(NatType, argType, ctx)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return NatType
@@ -388,7 +390,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         val expressionType = typesContext.runWithExpectedType(expectedType) { ctx.expr().accept(this) }
 
         if (!isUnifiable(expectedType, expressionType)) {
-            reportUnexpectedType(expectedType, expressionType, ctx)
+            reportUnexpectedType(expectedType, expressionType, ctx, parser)
         }
 
         return expectedType
@@ -397,7 +399,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitNatRec(ctx: NatRecContext): Type {
         val nType = ctx.n.accept(this)
         if (nType != NatType) {
-            reportUnexpectedType(NatType, nType, ctx)
+            reportUnexpectedType(NatType, nType, ctx, parser)
         }
 
         val zType = ctx.initial.accept(this)
@@ -405,7 +407,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
 
         val expectedSType = FuncType(NatType, FuncType(zType, zType))
         if (!isUnifiable(expectedSType, sType)) {
-            reportUnexpectedType(expectedSType, sType, ctx)
+            reportUnexpectedType(expectedSType, sType, ctx, parser)
         }
 
         return zType
@@ -422,12 +424,12 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     override fun visitDotTuple(ctx: DotTupleContext): Type {
         val tupleType = ctx.expr().accept(this)
         if (tupleType !is TupleType) {
-            ErrorNotATuple(ctx, tupleType).report()
+            ErrorNotATuple(ctx, tupleType).report(parser)
         }
 
         val index = ctx.index.text.toInt() - 1
         if (tupleType.types.size <= index) {
-            ErrorTupleIndexOfBounds(ctx, index).report()
+            ErrorTupleIndexOfBounds(ctx, index).report(parser)
         }
 
         return tupleType.types[ctx.index.text.toInt() - 1]
@@ -478,7 +480,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         if (pattern is PatternInlContext) {
             val patternName = (pattern.pattern() as PatternVarContext).name.text
             expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report()
+                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report(parser)
 
             return typesContext.runWithTypeInfo(patternName, expectedType.inl) {
                 ctx.expr().accept(this)
@@ -487,7 +489,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
         if (pattern is PatternInrContext) {
             val patternName = (pattern.pattern() as PatternVarContext).name.text
             expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report()
+                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report(parser)
 
             return typesContext.runWithTypeInfo(patternName, expectedType.inr) {
                 ctx.expr().accept(this)
@@ -625,7 +627,7 @@ class TypeChecker(private val typesContext: TypesContext = TypesContext()) : ste
     }
 
     override fun visitTypeList(ctx: TypeListContext): Type {
-        TODO("Not yet implemented")
+        return ListType(ctx.stellatype().accept(this))
     }
 
     override fun visitRecordFieldType(ctx: RecordFieldTypeContext): Type {
