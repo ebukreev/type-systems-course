@@ -44,6 +44,12 @@ data class SumType(val inl: Type, val inr: Type) : Type {
     }
 }
 
+data class ListType(val contentType: Type) : Type {
+    override fun toString(): String {
+        return "[$contentType]"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }

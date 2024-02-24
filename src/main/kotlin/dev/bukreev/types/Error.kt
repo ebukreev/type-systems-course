@@ -88,9 +88,16 @@ data class ErrorNotARecord(val expression: ExprContext, val type: Type) : Error 
     }
 }
 
-data object ErrorNotAList : Error {
+data class ErrorNotAList(val expression: ExprContext, val type: Type) : Error {
     override fun stringify(parser: stellaParser): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_NOT_A_LIST:
+             для выражения
+               ${expression.toStringTree(parser)}
+             ожидается тип списка
+             но получен тип
+               $type
+       """.trimIndent()
     }
 }
 
@@ -150,9 +157,17 @@ data class ErrorUnexpectedRecord(val expected: Type, val actual: Type?, val expr
     }
 }
 
-data object ErrorUnexpectedList : Error {
+data class ErrorUnexpectedList(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_UNEXPECTED_LIST:
+             ожидается не тип списка
+               $expected
+             но получен тип списка
+               $actual
+             для выражения
+               ${expression.toStringTree(parser)}
+       """.trimIndent()
     }
 }
 
@@ -256,7 +271,13 @@ data class ErrorAmbiguousSumType(val expression: ExprContext) : Error {
 
 data class ErrorAmbiguousList(val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
-        TODO("Not yet implemented")
+        return """
+           ERROR_AMBIGUOUS_LIST:
+             тип списка
+               ${expression.toStringTree(parser)}
+             невозможно определить 
+             в данном контексте отсутсвует ожидаемый тип списка
+       """.trimIndent()
     }
 }
 
@@ -326,6 +347,10 @@ fun reportUnexpectedType(expected: Type, actual: Type?, expression: ExprContext,
         if (missingFields.isNotEmpty()) {
             ErrorMissingRecordFields(expected, actual, expression, missingFields).report(parser)
         }
+    }
+
+    if (expected !is ListType && actual is ListType) {
+        ErrorUnexpectedList(expected, actual, expression).report(parser)
     }
 
     ErrorUnexpectedTypeForExpression(expected, actual, expression).report(parser)

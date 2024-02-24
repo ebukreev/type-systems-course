@@ -2,7 +2,7 @@ package dev.bukreev.types
 
 class TypesContext {
     private val typesOfVariables = mutableMapOf<String, MutableList<Type>>()
-    private val expectedTypes = mutableListOf<Type>()
+    private val expectedTypes = mutableListOf<Type?>()
 
     fun getType(variable: String): Type? {
         return typesOfVariables[variable]?.firstOrNull()
@@ -12,7 +12,7 @@ class TypesContext {
         return expectedTypes.lastOrNull()
     }
 
-    fun <T> runWithExpectedType(type: Type, action: () -> T): T {
+    fun <T> runWithExpectedType(type: Type?, action: () -> T): T {
         expectedTypes.add(type)
         try {
             return action()

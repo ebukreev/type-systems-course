@@ -44,7 +44,7 @@ class TypeCheckBadTest {
         paths.forEach {
             try {
                 buffer = StringBuilder()
-                Parser.parse(it.readText()).accept(TypeChecker())
+                Parser.parse(it.readText()).let { p -> p.program().accept(TypeChecker(p)) }
                 assert(false) { it.toString() }
             } catch (e: ExitException) {
                 assertEquals(e.status, 1)

@@ -169,7 +169,29 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitList(ctx: ListContext): Type {
-        TODO("Not yet implemented")
+        val expectedType = typesContext.getExpectedType()
+        if (ctx.exprs.isEmpty()) {
+            if (expectedType !is ListType) {
+                ErrorAmbiguousList(ctx).report(parser)
+            }
+
+            return expectedType
+        }
+
+        val firstElemType = typesContext.runWithExpectedType((expectedType as? ListType)?.contentType) {
+            ctx.exprs.first().accept(this)
+        }
+
+        typesContext.runWithExpectedType(firstElemType) {
+            ctx.exprs.drop(1).forEach {
+                val exprType = it.accept(this)
+                if (!isUnifiable(firstElemType, exprType)) {
+                    reportUnexpectedType(firstElemType, exprType, ctx, parser)
+                }
+            }
+        }
+
+        return ListType(firstElemType)
     }
 
     override fun visitTryCatch(ctx: TryCatchContext): Type {
@@ -177,6 +199,15 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitHead(ctx: HeadContext): Type {
+        val listType = ctx.list.accept(this)
+        if (listType !is ListType) {
+            ErrorNotAList(ctx, listType).report(parser)
+        }
+
+        return listType.contentType
+    }
+
+    override fun visitTerminatingSemicolon(ctx: TerminatingSemicolonContext?): Type {
         TODO("Not yet implemented")
     }
 
@@ -262,7 +293,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitIsEmpty(ctx: IsEmptyContext): Type {
-        TODO("Not yet implemented")
+        val argType = ctx.list.accept(this)
+        if (argType !is ListType) {
+            ErrorNotAList(ctx, argType).report(parser)
+        }
+
+        return BoolType
     }
 
     override fun visitPanic(ctx: PanicContext): Type {
@@ -344,7 +380,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTail(ctx: TailContext): Type {
-        TODO("Not yet implemented")
+        val listType = ctx.list.accept(this)
+        if (listType !is ListType) {
+            ErrorNotAList(ctx, listType).report(parser)
+        }
+
+        return listType
     }
 
     override fun visitRecord(ctx: RecordContext): Type {
@@ -458,7 +499,16 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitConsList(ctx: ConsListContext): Type {
-        TODO("Not yet implemented")
+        val headType = typesContext.runWithExpectedType((typesContext.getExpectedType() as? ListType)?.contentType) {
+            ctx.head.accept(this)
+        }
+        val expectedListType = ListType(headType)
+        val tailType = typesContext.runWithExpectedType(expectedListType) { ctx.tail.accept(this) }
+        if (isUnifiable(expectedListType, tailType)) {
+            reportUnexpectedType(expectedListType, tailType, ctx, parser)
+        }
+
+        return expectedListType
     }
 
     override fun visitPatternBinding(ctx: PatternBindingContext): Type {

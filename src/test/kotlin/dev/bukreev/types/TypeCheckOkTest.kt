@@ -14,6 +14,6 @@ class TypeCheckOkTest {
             .filter { item -> Files.isRegularFile(item) }
             .filter { item -> item.toString().endsWith(".st") }
 
-        paths.forEach { Parser.parse(it.readText()).accept(TypeChecker()) }
+        paths.forEach { Parser.parse(it.readText()).let { p -> p.program().accept(TypeChecker(p)) } }
     }
 }
