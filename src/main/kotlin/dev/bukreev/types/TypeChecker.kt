@@ -252,7 +252,20 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitVariant(ctx: VariantContext): Type {
-        TODO("Not yet implemented")
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousVariantType(ctx).report(parser)
+        val variantType = typesContext.runWithExpectedType(null) { ctx.rhs.accept(this) }
+        if (expectedType !is VariantType) {
+            ErrorUnexpectedVariant(expectedType, ctx).report(parser)
+        }
+        val variantLabel = ctx.label.text
+        val expectedLabel = expectedType.variants.firstOrNull { it.first == variantLabel }
+            ?: ErrorUnexpectedVariantLabel(variantLabel, variantType, expectedType, ctx).report(parser)
+
+        if (!isUnifiable(expectedLabel.second, variantType)) {
+            ErrorUnexpectedTypeForExpression(expectedLabel.second, variantType, ctx).report(parser)
+        }
+
+        return expectedType
     }
 
     override fun visitConstTrue(ctx: ConstTrueContext): Type {
@@ -359,12 +372,14 @@ class TypeChecker(private val parser: stellaParser,
             ErrorIllegalEmptyMatching(ctx).report(parser)
         }
 
+        var isExhaustive = cases.any { it.pattern() is PatternVarContext }
         if (expressionType is SumType) {
-            val isExhaustive = cases.any { it.pattern() is PatternVarContext } ||
+            isExhaustive = isExhaustive ||
                     cases.any { it.pattern() is PatternInlContext } && cases.any { it.pattern() is PatternInrContext }
-            if (!isExhaustive) {
-                ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report(parser)
-            }
+        } else if (expressionType is VariantType) {
+            val casesLabels = cases.mapNotNull { (it.pattern() as? PatternVariantContext)?.label?.text }
+            isExhaustive = isExhaustive ||
+                    expressionType.variants.map { it.first }.all { casesLabels.contains(it) }
         }
 
         return typesContext.runWithExpectedType(expressionType) {
@@ -378,7 +393,9 @@ class TypeChecker(private val parser: stellaParser,
             }
 
             casesType
-        }
+        }.also { if (!isExhaustive) {
+            ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report(parser)
+        } }
     }
 
     override fun visitLogicNot(ctx: LogicNotContext): Type {
@@ -575,7 +592,7 @@ class TypeChecker(private val parser: stellaParser,
         if (pattern is PatternInlContext) {
             val patternName = (pattern.pattern() as PatternVarContext).name.text
             expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report(parser)
+                ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
 
             return typesContext.runWithTypeInfo(patternName, expectedType.inl) {
                 ctx.expr().accept(this)
@@ -584,9 +601,21 @@ class TypeChecker(private val parser: stellaParser,
         if (pattern is PatternInrContext) {
             val patternName = (pattern.pattern() as PatternVarContext).name.text
             expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(typesContext.getExpectedType(), pattern).report(parser)
+                ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
 
             return typesContext.runWithTypeInfo(patternName, expectedType.inr) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternVariantContext) {
+            expectedType as? VariantType
+                ?: ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
+            val variantType = expectedType.variants.firstOrNull { it.first == pattern.label.text }
+                ?: ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
+
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+
+            return typesContext.runWithTypeInfo(patternName, variantType.second) {
                 ctx.expr().accept(this)
             }
         }
@@ -682,7 +711,7 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTypeVariant(ctx: TypeVariantContext): Type {
-        TODO("Not yet implemented")
+        return VariantType(ctx.fieldTypes.map { Pair(it.label.text, it.stellatype().accept(this))  })
     }
 
     override fun visitTypeUnit(ctx: TypeUnitContext): Type {

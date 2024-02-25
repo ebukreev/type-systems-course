@@ -177,6 +177,18 @@ data class ErrorUnexpectedInjection(val expectedType: Type, val expression: Expr
     }
 }
 
+data class ErrorUnexpectedVariant(val expectedType: Type, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_VARIANT:
+             получена вариант 
+               ${expression.toStringTree(parser)}
+             но ожидается не вариантный тип
+               $expectedType
+       """.trimIndent()
+    }
+}
+
 data class ErrorMissingRecordFields(val expected: Type?, val actual: RecordType, val expression: ExprContext,
                                     val fields: Set<Pair<String, Type>>) : Error {
     override fun stringify(parser: stellaParser): String {
@@ -223,6 +235,21 @@ data class ErrorUnexpectedFieldAccess(val recordType: RecordType, val expression
     }
 }
 
+data class ErrorUnexpectedVariantLabel(val label: String, val labelType: Type,
+                                       val type: VariantType, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_VARIANT_LABEL:
+             неожиданная метка 
+               $label : $labelType
+             для типа варианта
+               $type
+             в выражении
+               ${expression.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
 data class ErrorTupleIndexOfBounds(val expression: ExprContext, val index: Int) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
@@ -256,6 +283,18 @@ data class ErrorAmbiguousSumType(val expression: ExprContext) : Error {
                ${expression.toStringTree(parser)}
              невозможно определить 
              в данном контексте отсутсвует ожидаемый тип-сумма
+       """.trimIndent()
+    }
+}
+
+data class ErrorAmbiguousVariantType(val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_AMBIGUOUS_VARIANT_TYPE:
+             вариантный тип
+               ${expression.toStringTree(parser)}
+             невозможно определить 
+             в данном контексте отсутсвует ожидаемый вариантный тип
        """.trimIndent()
     }
 }
