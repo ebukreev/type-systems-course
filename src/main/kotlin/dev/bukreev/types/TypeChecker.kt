@@ -525,7 +525,17 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitFix(ctx: FixContext): Type {
-        TODO("Not yet implemented")
+        val expressionType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
+        if (expressionType !is FuncType) {
+            ErrorNotAFunction(ctx.expr(), expressionType).report(parser)
+        }
+
+        val expectedType = FuncType(expressionType.argType, expressionType.argType)
+        if (!isUnifiable(expectedType, expressionType)) {
+            ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
+        }
+
+        return expectedType.argType
     }
 
     override fun visitLet(ctx: LetContext): Type {
