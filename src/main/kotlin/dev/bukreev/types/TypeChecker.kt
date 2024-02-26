@@ -66,13 +66,22 @@ class TypeChecker(private val parser: stellaParser,
 
         typesContext.addTypeInfo(ctx.name.text, funcType)
         return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
-            typesContext.runWithExpectedType(returnType) {
-                val returnExpressionType = ctx.returnExpr.accept(this)
-                if (!isUnifiable(returnType, returnExpressionType)) {
-                    ErrorUnexpectedTypeForExpression(returnType, returnExpressionType, ctx.returnExpr).report(parser)
-                }
+            val nestedFunctions = ctx.localDecls.filterIsInstance<DeclFunContext>().map {
+                Pair(it.name.text, it.accept(this))
+            }
+            typesContext.runWithTypesInfo(nestedFunctions) {
+                typesContext.runWithExpectedType(returnType) {
+                    val returnExpressionType = ctx.returnExpr.accept(this)
+                    if (!isUnifiable(returnType, returnExpressionType)) {
+                        ErrorUnexpectedTypeForExpression(
+                            returnType,
+                            returnExpressionType,
+                            ctx.returnExpr
+                        ).report(parser)
+                    }
 
-                funcType
+                    funcType
+                }
             }
         }
     }

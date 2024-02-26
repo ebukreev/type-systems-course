@@ -5,7 +5,7 @@ class TypesContext {
     private val expectedTypes = mutableListOf<Type?>()
 
     fun getType(variable: String): Type? {
-        return typesOfVariables[variable]?.firstOrNull()
+        return typesOfVariables[variable]?.lastOrNull()
     }
 
     fun getExpectedType(): Type? {
@@ -27,6 +27,15 @@ class TypesContext {
             return action()
         } finally {
             removeTypeInfo(variable)
+        }
+    }
+
+    fun <T> runWithTypesInfo(typesInfo : List<Pair<String, Type>>, action: () -> T): T {
+        typesInfo.forEach { addTypeInfo(it.first, it.second) }
+        try {
+            return action()
+        } finally {
+            typesInfo.forEach { removeTypeInfo(it.first) }
         }
     }
 
