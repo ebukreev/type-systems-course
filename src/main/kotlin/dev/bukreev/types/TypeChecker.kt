@@ -243,7 +243,9 @@ class TypeChecker(private val parser: stellaParser,
         }
 
         return typesContext.runWithTypeInfo(paramName, paramType) {
-            FuncType(paramType, ctx.returnExpr.accept(this))
+            FuncType(paramType, typesContext.runWithExpectedType((expectedType as? FuncType)?.returnType) {
+                ctx.returnExpr.accept(this)
+            })
         }
     }
 
@@ -253,13 +255,15 @@ class TypeChecker(private val parser: stellaParser,
 
     override fun visitVariant(ctx: VariantContext): Type {
         val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousVariantType(ctx).report(parser)
-        val variantType = typesContext.runWithExpectedType(null) { ctx.rhs.accept(this) }
         if (expectedType !is VariantType) {
             ErrorUnexpectedVariant(expectedType, ctx).report(parser)
         }
         val variantLabel = ctx.label.text
         val expectedLabel = expectedType.variants.firstOrNull { it.first == variantLabel }
-            ?: ErrorUnexpectedVariantLabel(variantLabel, variantType, expectedType, ctx).report(parser)
+        val variantType = typesContext.runWithExpectedType(expectedLabel?.second) { ctx.rhs.accept(this) }
+        if (expectedLabel == null) {
+            ErrorUnexpectedVariantLabel(variantLabel, variantType, expectedType, ctx).report(parser)
+        }
 
         if (!isUnifiable(expectedLabel.second, variantType)) {
             ErrorUnexpectedTypeForExpression(expectedLabel.second, variantType, ctx).report(parser)
@@ -342,11 +346,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitInl(ctx: InlContext): Type {
-        val leftType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
         val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
         if (expectedType !is SumType) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
+
+        val leftType = typesContext.runWithExpectedType(expectedType.inl) { ctx.expr().accept(this) }
 
         return SumType(leftType, expectedType.inr)
     }
@@ -356,11 +361,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitInr(ctx: InrContext): Type {
-        val rightType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
         val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
         if (expectedType !is SumType) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
+
+        val rightType = typesContext.runWithExpectedType(expectedType.inr) { ctx.expr().accept(this) }
 
         return SumType(expectedType.inl, rightType)
     }
@@ -382,20 +388,60 @@ class TypeChecker(private val parser: stellaParser,
                     expressionType.variants.map { it.first }.all { casesLabels.contains(it) }
         }
 
-        return typesContext.runWithExpectedType(expressionType) {
-            val casesType = cases.first().accept(this)
+        val casesType = processMatchCase(cases.first(), expressionType)
 
-            cases.drop(1).forEach {
-                val caseType = it.accept(this)
-                if (!isUnifiable(casesType, caseType)) {
-                    ErrorUnexpectedTypeForExpression(casesType, caseType, ctx).report(parser)
-                }
+        cases.drop(1).forEach {
+            val caseType = processMatchCase(it, expressionType)
+            if (!isUnifiable(casesType, caseType)) {
+                ErrorUnexpectedTypeForExpression(casesType, caseType, ctx).report(parser)
             }
+        }
 
-            casesType
-        }.also { if (!isExhaustive) {
+        if (!isExhaustive) {
             ErrorNonexhaustiveMatchPatterns(expressionType, ctx).report(parser)
-        } }
+        }
+
+        return casesType
+    }
+
+    private fun processMatchCase(ctx: MatchCaseContext, expressionType: Type): Type {
+        val pattern = ctx.pattern()
+        if (pattern is PatternVarContext) {
+            return typesContext.runWithTypeInfo(pattern.name.text, expressionType) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternInlContext) {
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+            expressionType as? SumType ?:
+            ErrorUnexpectedPatternForType(expressionType, pattern).report(parser)
+
+            return typesContext.runWithTypeInfo(patternName, expressionType.inl) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternInrContext) {
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+            expressionType as? SumType ?:
+            ErrorUnexpectedPatternForType(expressionType, pattern).report(parser)
+
+            return typesContext.runWithTypeInfo(patternName, expressionType.inr) {
+                ctx.expr().accept(this)
+            }
+        }
+        if (pattern is PatternVariantContext) {
+            expressionType as? VariantType
+                ?: ErrorUnexpectedPatternForType(expressionType, pattern).report(parser)
+            val variantType = expressionType.variants.firstOrNull { it.first == pattern.label.text }
+                ?: ErrorUnexpectedPatternForType(expressionType, pattern).report(parser)
+
+            val patternName = (pattern.pattern() as PatternVarContext).name.text
+
+            return typesContext.runWithTypeInfo(patternName, variantType.second) {
+                ctx.expr().accept(this)
+            }
+        }
+        TODO("Not yet implemented")
     }
 
     override fun visitLogicNot(ctx: LogicNotContext): Type {
@@ -423,7 +469,8 @@ class TypeChecker(private val parser: stellaParser,
 
         val fields = mutableListOf<Pair<String, Type>>()
         for (binding in ctx.bindings) {
-            fields.add(Pair(binding.name.text, typesContext.runWithExpectedType(null) {
+            val expectedType = (expected as? RecordType)?.fields?.firstOrNull { it.first == binding.name.text }?.second
+            fields.add(Pair(binding.name.text, typesContext.runWithExpectedType(expectedType) {
                 binding.rhs.accept(this)
             }))
         }
@@ -492,9 +539,9 @@ class TypeChecker(private val parser: stellaParser,
         }
 
         val zType = ctx.initial.accept(this)
-        val sType = typesContext.runWithExpectedType(null) { ctx.step.accept(this) }
-
         val expectedSType = FuncType(NatType, FuncType(zType, zType))
+        val sType = typesContext.runWithExpectedType(expectedSType) { ctx.step.accept(this) }
+
         if (!isUnifiable(expectedSType, sType)) {
             ErrorUnexpectedTypeForExpression(expectedSType, sType, ctx).report(parser)
         }
@@ -525,7 +572,8 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitFix(ctx: FixContext): Type {
-        val expressionType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
+        val expressionExpectedType = typesContext.getExpectedType()?.let { FuncType(it, it) }
+        val expressionType = typesContext.runWithExpectedType(expressionExpectedType) { ctx.expr().accept(this) }
         if (expressionType !is FuncType) {
             ErrorNotAFunction(ctx.expr(), expressionType).report(parser)
         }
@@ -562,7 +610,13 @@ class TypeChecker(private val parser: stellaParser,
             ErrorUnexpectedTupleLength(expected, ctx).report(parser)
         }
 
-        return TupleType(ctx.exprs.map { it.accept(this) })
+        val expressionTypes = mutableListOf<Type>()
+        for (i in ctx.exprs.indices) {
+            expressionTypes.add(typesContext.runWithExpectedType((expected as? TupleType)?.types?.get(i)) {
+                ctx.exprs[i].accept(this)
+            })
+        }
+        return TupleType(expressionTypes)
     }
 
     override fun visitConsList(ctx: ConsListContext): Type {
@@ -592,43 +646,6 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitMatchCase(ctx: MatchCaseContext): Type {
-        val pattern = ctx.pattern()
-        val expectedType = typesContext.getExpectedType()!!
-        if (pattern is PatternVarContext) {
-            return typesContext.runWithTypeInfo(pattern.name.text, expectedType) {
-                ctx.expr().accept(this)
-            }
-        }
-        if (pattern is PatternInlContext) {
-            val patternName = (pattern.pattern() as PatternVarContext).name.text
-            expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
-
-            return typesContext.runWithTypeInfo(patternName, expectedType.inl) {
-                ctx.expr().accept(this)
-            }
-        }
-        if (pattern is PatternInrContext) {
-            val patternName = (pattern.pattern() as PatternVarContext).name.text
-            expectedType as? SumType ?:
-                ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
-
-            return typesContext.runWithTypeInfo(patternName, expectedType.inr) {
-                ctx.expr().accept(this)
-            }
-        }
-        if (pattern is PatternVariantContext) {
-            expectedType as? VariantType
-                ?: ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
-            val variantType = expectedType.variants.firstOrNull { it.first == pattern.label.text }
-                ?: ErrorUnexpectedPatternForType(expectedType, pattern).report(parser)
-
-            val patternName = (pattern.pattern() as PatternVarContext).name.text
-
-            return typesContext.runWithTypeInfo(patternName, variantType.second) {
-                ctx.expr().accept(this)
-            }
-        }
         TODO("Not yet implemented")
     }
 
