@@ -14,9 +14,9 @@ data object BoolType : Type {
     }
 }
 
-data class FuncType(val argType: Type, val returnType: Type) : Type {
+data class FuncType(val argTypes: List<Type>, val returnType: Type) : Type {
     override fun toString(): String {
-        return "fn($argType) -> $returnType"
+        return "fn(${argTypes.joinToString(separator = ", ")}) -> $returnType"
     }
 }
 

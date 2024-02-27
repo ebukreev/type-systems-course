@@ -47,7 +47,16 @@ class TypeChecker(private val parser: stellaParser,
             }
         }
 
-        return mainFunctionType ?: ErrorMissingMain.report(parser)
+        if (mainFunctionType == null) {
+            ErrorMissingMain.report(parser)
+        }
+
+        val mainArgsSize = (mainFunctionType as FuncType).argTypes.size
+        if (mainArgsSize != 1) {
+            ErrorIncorrectArityOfMain(mainArgsSize).report(parser)
+        }
+
+        return mainFunctionType
     }
 
     override fun visitLanguageCore(ctx: LanguageCoreContext): Type {
@@ -59,13 +68,13 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitDeclFun(ctx: DeclFunContext): Type {
-        val param = ctx.paramDecl
-        val paramType = param.paramType.accept(this)
+        val params = ctx.paramDecls
+        val paramsInfo = params.map { Pair(it.name.text, it.paramType.accept(this)) }
         val returnType = ctx.returnType.accept(this)
-        val funcType = FuncType(paramType, returnType)
+        val funcType = FuncType(paramsInfo.map { it.second }, returnType)
 
         typesContext.addTypeInfo(ctx.name.text, funcType)
-        return typesContext.runWithTypeInfo<Type>(param.name.text, paramType) {
+        return typesContext.runWithTypesInfo<Type>(paramsInfo) {
             val nestedFunctions = ctx.localDecls.filterIsInstance<DeclFunContext>().map {
                 Pair(it.name.text, it.accept(this))
             }
@@ -241,18 +250,28 @@ class TypeChecker(private val parser: stellaParser,
         if (expectedType != null && expectedType !is FuncType) {
             ErrorUnexpectedLambda(expectedType, ctx).report(parser)
         }
-        val expectedArgType = (expectedType as? FuncType)?.argType
+        val expectedArgTypes = (expectedType as? FuncType)?.argTypes
 
-        val param = ctx.paramDecl
-        val paramName = param.name.text
-        val paramType = typesContext.runWithExpectedType(expectedArgType) { param.stellatype().accept(this) }
-
-        if (expectedArgType != null && !isUnifiable(paramType, expectedArgType)) {
-            ErrorUnexpectedTypeForParameter(paramType, expectedArgType, ctx).report(parser)
+        val params = ctx.paramDecls
+        if (expectedArgTypes != null && expectedArgTypes.size != params.size) {
+            ErrorUnexpectedNumberOfParametersInLambda(expectedArgTypes.size, ctx).report(parser)
         }
 
-        return typesContext.runWithTypeInfo(paramName, paramType) {
-            FuncType(paramType, typesContext.runWithExpectedType((expectedType as? FuncType)?.returnType) {
+        val paramsInfo = mutableListOf<Pair<String, Type>>()
+        for (i in params.indices) {
+            val name = params[i].name.text
+            val expectedParamType = expectedArgTypes?.get(i)
+            val paramType = typesContext.runWithExpectedType(expectedParamType) { params[i].stellatype().accept(this) }
+
+            if (expectedParamType != null && !isUnifiable(paramType, expectedParamType)) {
+                ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
+            }
+
+            paramsInfo.add(Pair(name, paramType))
+        }
+
+        return typesContext.runWithTypesInfo(paramsInfo) {
+            FuncType(paramsInfo.map { it.second }, typesContext.runWithExpectedType((expectedType as? FuncType)?.returnType) {
                 ctx.returnExpr.accept(this)
             })
         }
@@ -316,9 +335,15 @@ class TypeChecker(private val parser: stellaParser,
             ErrorNotAFunction(ctx.`fun`, funType).report(parser)
         }
 
-        val exprType = typesContext.runWithExpectedType(funType.argType) { ctx.expr.accept(this) }
-        if (!isUnifiable(funType.argType, exprType)) {
-            ErrorUnexpectedTypeForExpression(funType.argType, exprType, ctx).report(parser)
+        if (funType.argTypes.size != ctx.args.size) {
+            ErrorIncorrectNumberOfArguments(ctx.args.size, funType.argTypes.size, ctx).report(parser)
+        }
+        for (i in funType.argTypes.indices) {
+            val expectedType = funType.argTypes[i]
+            val exprType = typesContext.runWithExpectedType(expectedType) { ctx.args[i].accept(this) }
+            if (!isUnifiable(expectedType, exprType)) {
+                ErrorUnexpectedTypeForExpression(expectedType, exprType, ctx).report(parser)
+            }
         }
 
         return funType.returnType
@@ -548,7 +573,7 @@ class TypeChecker(private val parser: stellaParser,
         }
 
         val zType = ctx.initial.accept(this)
-        val expectedSType = FuncType(NatType, FuncType(zType, zType))
+        val expectedSType = FuncType(listOf(NatType), FuncType(listOf(zType), zType))
         val sType = typesContext.runWithExpectedType(expectedSType) { ctx.step.accept(this) }
 
         if (!isUnifiable(expectedSType, sType)) {
@@ -581,18 +606,18 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitFix(ctx: FixContext): Type {
-        val expressionExpectedType = typesContext.getExpectedType()?.let { FuncType(it, it) }
+        val expressionExpectedType = typesContext.getExpectedType()?.let { FuncType(listOf(it), it) }
         val expressionType = typesContext.runWithExpectedType(expressionExpectedType) { ctx.expr().accept(this) }
-        if (expressionType !is FuncType) {
+        if (expressionType !is FuncType || expressionType.argTypes.size != 1) {
             ErrorNotAFunction(ctx.expr(), expressionType).report(parser)
         }
 
-        val expectedType = FuncType(expressionType.argType, expressionType.argType)
+        val expectedType = FuncType(expressionType.argTypes, expressionType.argTypes.first())
         if (!isUnifiable(expectedType, expressionType)) {
             ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
         }
 
-        return expectedType.argType
+        return expectedType.argTypes.first()
     }
 
     override fun visitLet(ctx: LetContext): Type {
@@ -767,7 +792,7 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTypeFun(ctx: TypeFunContext): Type {
-        val paramType = ctx.paramTypes.first().accept(this)
+        val paramType = ctx.paramTypes.map { it.accept(this) }
         val returnType = ctx.returnType.accept(this)
 
         return FuncType(paramType, returnType)

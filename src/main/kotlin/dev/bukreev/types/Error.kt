@@ -345,3 +345,35 @@ data class ErrorUnexpectedPatternForType(val type: Type?, val pattern: PatternCo
        """.trimIndent()
     }
 }
+
+data class ErrorIncorrectArityOfMain(val n: Int) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_INCORRECT_ARITY_OF_MAIN:
+             функция main объявлена с $n паарметрами
+             а должна быть с 1
+       """.trimIndent()
+    }
+}
+
+data class ErrorIncorrectNumberOfArguments(val actual: Int, val expected: Int, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_INCORRECT_NUMBER_OF_ARGUMENTS:
+             вызов
+                ${expression.toStringTree()}
+             происходит с $actual аргументами, а должен с $expected
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedNumberOfParametersInLambda(val expected: Int, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_NUMBER_OF_PARAMETERS_IN_LAMBDA:
+             количество параметров анонимной функции
+                ${expression.toStringTree()}
+             не совпадает с ожидаемым количеством параметров $expected
+       """.trimIndent()
+    }
+}
