@@ -523,7 +523,7 @@ class TypeChecker(private val parser: stellaParser,
             }
         }
 
-        return actualType
+        return expected as? RecordType ?: actualType
     }
 
     override fun visitLogicAnd(ctx: LogicAndContext): Type {
