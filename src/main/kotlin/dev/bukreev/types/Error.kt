@@ -361,7 +361,7 @@ data class ErrorIncorrectNumberOfArguments(val actual: Int, val expected: Int, v
         return """
            ERROR_INCORRECT_NUMBER_OF_ARGUMENTS:
              вызов
-                ${expression.toStringTree()}
+                ${expression.toStringTree(parser)}
              происходит с $actual аргументами, а должен с $expected
        """.trimIndent()
     }
@@ -372,8 +372,19 @@ data class ErrorUnexpectedNumberOfParametersInLambda(val expected: Int, val expr
         return """
            ERROR_UNEXPECTED_NUMBER_OF_PARAMETERS_IN_LAMBDA:
              количество параметров анонимной функции
-                ${expression.toStringTree()}
+                ${expression.toStringTree(parser)}
              не совпадает с ожидаемым количеством параметров $expected
+       """.trimIndent()
+    }
+}
+
+data class ErrorDuplicatePatternVariable(val pattern: PatternContext, val variable: String) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_DUPLICATE_PATTERN_VARIABLE:
+             переменная $variable
+             встречается больше 1 раза в паттерне
+                ${pattern.toStringTree(parser)}
        """.trimIndent()
     }
 }
