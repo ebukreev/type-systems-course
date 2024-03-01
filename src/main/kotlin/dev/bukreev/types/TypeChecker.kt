@@ -709,8 +709,15 @@ class TypeChecker(private val parser: stellaParser,
 
         for (patternBinding in ctx.patternBindings) {
             val patternBindingType = typesContext.runWithExpectedType(null) {
-                patternBinding.expr().accept(this)
+                typesContext.runWithTypesInfo(variables) {
+                    patternBinding.expr().accept(this)
+                }
             }
+
+            if (!ExhaustivenessChecker.isExhaustive(listOf(patternBinding.pattern()), patternBindingType)) {
+                ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
+            }
+
             val vars = getVariablesInfoFromPattern(patternBinding.pattern(), patternBindingType)
 
             val duplicate = variables.map { it.first }.groupingBy { it }.eachCount().asIterable()

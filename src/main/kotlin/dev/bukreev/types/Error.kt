@@ -333,6 +333,18 @@ data class ErrorNonexhaustiveMatchPatterns(val expectedType: Type, val expressio
     }
 }
 
+data class ErrorNonexhaustiveLetPatterns(val expectedType: Type, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_NONEXHAUSTIVE_LET_PATTERNS:
+             не все образцы для типа
+                $expectedType
+             перечислены в выражении
+                ${expression.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
 data class ErrorUnexpectedPatternForType(val type: Type?, val pattern: PatternContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
