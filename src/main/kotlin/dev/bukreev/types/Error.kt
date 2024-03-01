@@ -235,13 +235,12 @@ data class ErrorUnexpectedFieldAccess(val recordType: RecordType, val expression
     }
 }
 
-data class ErrorUnexpectedVariantLabel(val label: String, val labelType: Type,
-                                       val type: VariantType, val expression: ExprContext) : Error {
+data class ErrorUnexpectedVariantLabel(val label: String, val type: VariantType, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_VARIANT_LABEL:
              неожиданная метка 
-               $label : $labelType
+               $label
              для типа варианта
                $type
              в выражении
@@ -385,6 +384,54 @@ data class ErrorDuplicatePatternVariable(val pattern: PatternContext, val variab
              переменная $variable
              встречается больше 1 раза в паттерне
                 ${pattern.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedDataForNullaryLabel(val expr: ExprContext, val type: Type) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_DATA_FOR_NULLARY_LABEL:
+             выражение
+                ${expr.toStringTree(parser)}
+             содержит даннные для метки, хотя ожидается тег без данных
+                $type
+       """.trimIndent()
+    }
+}
+
+data class ErrorMissingDataForLabel(val expr: ExprContext, val type: Type) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_MISSING_DATA_FOR_LABEL:
+             выражение
+                ${expr.toStringTree(parser)}
+             не содержит даннные для метки, хотя ожидается тег с данными
+                $type
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedNonNullaryVariantPattern(val expr: PatternContext, val type: Type) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_NON_NULLARY_VARIANT_PATTERN:
+             паттерн
+                ${expr.toStringTree(parser)}
+             содержит тег с данными, хотя ожидается тег без данными
+                $type
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedNullaryVariantPattern(val expr: PatternContext, val type: Type) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_NULLARY_VARIANT_PATTERN:
+             паттерн
+                ${expr.toStringTree(parser)}
+             содержит тег без данных, хотя ожидается тег с данными
+                $type
        """.trimIndent()
     }
 }

@@ -52,8 +52,14 @@ object ExhaustivenessChecker {
                 val variantPatterns = patterns.filterIsInstance<PatternVariantContext>()
 
                 return expressionType.variants.all {
-                    isExhaustive(variantPatterns.filter { p -> p.label.text == it.first }.map { p -> p.pattern() },
-                        it.second)
+                    val varType = it.second
+                    if (varType != null) {
+                        isExhaustive(variantPatterns.filter { p -> p.label.text == it.first }
+                            .mapNotNull { p -> p.pattern() },
+                            varType)
+                    } else {
+                        variantPatterns.any { p -> p.label.text == it.first }
+                    }
                 }
             }
 

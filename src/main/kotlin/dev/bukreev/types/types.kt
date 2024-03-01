@@ -50,9 +50,11 @@ data class ListType(val contentType: Type) : Type {
     }
 }
 
-data class VariantType(val variants: List<Pair<String, Type>>) : Type {
+data class VariantType(val variants: List<Pair<String, Type?>>) : Type {
     override fun toString(): String {
-        return "<| ${variants.joinToString(separator = ", ") { "${it.first} : ${it.second}" }} |>"
+        return "<| ${variants.joinToString(separator = ", ") { 
+            "${it.first}${if (it.second != null)" : ${it.second}" else ""}" 
+        }} |>"
     }
 }
 

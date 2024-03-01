@@ -288,13 +288,21 @@ class TypeChecker(private val parser: stellaParser,
         }
         val variantLabel = ctx.label.text
         val expectedLabel = expectedType.variants.firstOrNull { it.first == variantLabel }
-        val variantType = typesContext.runWithExpectedType(expectedLabel?.second) { ctx.rhs.accept(this) }
-        if (expectedLabel == null) {
-            ErrorUnexpectedVariantLabel(variantLabel, variantType, expectedType, ctx).report(parser)
+            ?: ErrorUnexpectedVariantLabel(variantLabel, expectedType, ctx).report(parser)
+
+        if (expectedLabel.second == null && ctx.rhs != null) {
+            ErrorUnexpectedDataForNullaryLabel(ctx, expectedType).report(parser)
+        }
+        if (expectedLabel.second != null && ctx.rhs == null) {
+            ErrorMissingDataForLabel(ctx, expectedType).report(parser)
         }
 
-        if (!isUnifiable(expectedLabel.second, variantType)) {
-            ErrorUnexpectedTypeForExpression(expectedLabel.second, variantType, ctx).report(parser)
+        if (ctx.rhs != null) {
+            val variantType = typesContext.runWithExpectedType(expectedLabel.second) { ctx.rhs.accept(this) }
+
+            if (!isUnifiable(expectedLabel.second!!, variantType)) {
+                ErrorUnexpectedTypeForExpression(expectedLabel.second!!, variantType, ctx).report(parser)
+            }
         }
 
         return expectedType
@@ -510,8 +518,16 @@ class TypeChecker(private val parser: stellaParser,
                     if (type !is VariantType || !type.variants.any { it.first == pattern.label.text }) {
                         ErrorUnexpectedPatternForType(type, pattern).report(parser)
                     }
-                    getVariablesInfoFromPattern(pattern.pattern(),
-                        type.variants.first { it.first == pattern.label.text }.second)
+                    val labelType = type.variants.first { it.first == pattern.label.text }.second
+                    if (labelType != null && pattern.pattern() == null) {
+                        ErrorUnexpectedNullaryVariantPattern(pattern, type).report(parser)
+                    }
+                    if (labelType == null && pattern.pattern() != null) {
+                        ErrorUnexpectedNonNullaryVariantPattern(pattern, type).report(parser)
+                    }
+                    labelType?.let {
+                        getVariablesInfoFromPattern(pattern.pattern(), it)
+                    } ?: listOf()
                 }
 
                 is PatternListContext -> {
@@ -841,7 +857,7 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTypeVariant(ctx: TypeVariantContext): Type {
-        return VariantType(ctx.fieldTypes.map { Pair(it.label.text, it.stellatype().accept(this))  })
+        return VariantType(ctx.fieldTypes.map { Pair(it.label.text, it.stellatype()?.accept(this)) })
     }
 
     override fun visitTypeUnit(ctx: TypeUnitContext): Type {
