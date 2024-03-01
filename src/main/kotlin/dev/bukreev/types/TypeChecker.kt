@@ -438,119 +438,6 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     private fun processMatchCase(ctx: MatchCaseContext, expressionType: Type): Type {
-
-        fun getVariablesInfoFromPattern(pattern: PatternContext, type: Type): List<Pair<String, Type>> {
-            return when (pattern) {
-                is PatternVarContext -> listOf(Pair(pattern.name.text, type))
-
-                is ParenthesisedPatternContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
-
-                is PatternFalseContext -> {
-                    if (type != BoolType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    listOf()
-                }
-
-                is PatternTrueContext -> {
-                    if (type != BoolType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    listOf()
-                }
-
-                is PatternUnitContext -> {
-                    if (type != UnitType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    listOf()
-                }
-
-                is PatternInlContext -> {
-                    if (type !is SumType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    getVariablesInfoFromPattern(pattern.pattern(), type.inl)
-                }
-
-                is PatternInrContext -> {
-                    if (type !is SumType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    getVariablesInfoFromPattern(pattern.pattern(), type.inr)
-                }
-
-                is PatternIntContext -> {
-                    if (type != NatType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    listOf()
-                }
-
-                is PatternSuccContext -> {
-                    if (type != NatType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    getVariablesInfoFromPattern(pattern.pattern(), type)
-                }
-
-                is PatternRecordContext -> {
-                    if (type !is RecordType || pattern.patterns.map { it.label.text }.toSet() !=
-                            type.fields.map { it.first }.toSet()) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-
-                    buildList { pattern.patterns.forEach { addAll(getVariablesInfoFromPattern(it.pattern(),
-                        type.fields.first { f -> f.first == it.label.text }.second)) } }
-                }
-
-                is PatternTupleContext -> {
-                    if (type !is TupleType || type.types.size != pattern.patterns.size) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-
-                    pattern.patterns.withIndex().flatMap {
-                        getVariablesInfoFromPattern(it.value, type.types[it.index])
-                    }
-                }
-
-                is PatternVariantContext -> {
-                    if (type !is VariantType || !type.variants.any { it.first == pattern.label.text }) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    val labelType = type.variants.first { it.first == pattern.label.text }.second
-                    if (labelType != null && pattern.pattern() == null) {
-                        ErrorUnexpectedNullaryVariantPattern(pattern, type).report(parser)
-                    }
-                    if (labelType == null && pattern.pattern() != null) {
-                        ErrorUnexpectedNonNullaryVariantPattern(pattern, type).report(parser)
-                    }
-                    labelType?.let {
-                        getVariablesInfoFromPattern(pattern.pattern(), it)
-                    } ?: listOf()
-                }
-
-                is PatternListContext -> {
-                    if (type !is ListType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    pattern.patterns.flatMap { getVariablesInfoFromPattern(it, type.contentType) }
-                }
-
-                is PatternConsContext -> {
-                    if (type !is ListType) {
-                        ErrorUnexpectedPatternForType(type, pattern).report(parser)
-                    }
-                    buildList {
-                        addAll(getVariablesInfoFromPattern(pattern.head, type.contentType))
-                        addAll(getVariablesInfoFromPattern(pattern.tail, type))
-                    }
-                }
-
-                else -> throw IllegalStateException()
-            }
-        }
-
         val pattern = ctx.pattern()
         val variables = getVariablesInfoFromPattern(pattern, expressionType)
         val duplicate = variables.map { it.first }.groupingBy { it }.eachCount().asIterable()
@@ -560,6 +447,118 @@ class TypeChecker(private val parser: stellaParser,
         }
         return typesContext.runWithTypesInfo(variables) {
             ctx.expr().accept(this)
+        }
+    }
+
+    private fun getVariablesInfoFromPattern(pattern: PatternContext, type: Type): List<Pair<String, Type>> {
+        return when (pattern) {
+            is PatternVarContext -> listOf(Pair(pattern.name.text, type))
+
+            is ParenthesisedPatternContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
+
+            is PatternFalseContext -> {
+                if (type != BoolType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                listOf()
+            }
+
+            is PatternTrueContext -> {
+                if (type != BoolType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                listOf()
+            }
+
+            is PatternUnitContext -> {
+                if (type != UnitType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                listOf()
+            }
+
+            is PatternInlContext -> {
+                if (type !is SumType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                getVariablesInfoFromPattern(pattern.pattern(), type.inl)
+            }
+
+            is PatternInrContext -> {
+                if (type !is SumType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                getVariablesInfoFromPattern(pattern.pattern(), type.inr)
+            }
+
+            is PatternIntContext -> {
+                if (type != NatType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                listOf()
+            }
+
+            is PatternSuccContext -> {
+                if (type != NatType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                getVariablesInfoFromPattern(pattern.pattern(), type)
+            }
+
+            is PatternRecordContext -> {
+                if (type !is RecordType || pattern.patterns.map { it.label.text }.toSet() !=
+                    type.fields.map { it.first }.toSet()) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+
+                buildList { pattern.patterns.forEach { addAll(getVariablesInfoFromPattern(it.pattern(),
+                    type.fields.first { f -> f.first == it.label.text }.second)) } }
+            }
+
+            is PatternTupleContext -> {
+                if (type !is TupleType || type.types.size != pattern.patterns.size) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+
+                pattern.patterns.withIndex().flatMap {
+                    getVariablesInfoFromPattern(it.value, type.types[it.index])
+                }
+            }
+
+            is PatternVariantContext -> {
+                if (type !is VariantType || !type.variants.any { it.first == pattern.label.text }) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                val labelType = type.variants.first { it.first == pattern.label.text }.second
+                if (labelType != null && pattern.pattern() == null) {
+                    ErrorUnexpectedNullaryVariantPattern(pattern, type).report(parser)
+                }
+                if (labelType == null && pattern.pattern() != null) {
+                    ErrorUnexpectedNonNullaryVariantPattern(pattern, type).report(parser)
+                }
+                labelType?.let {
+                    getVariablesInfoFromPattern(pattern.pattern(), it)
+                } ?: listOf()
+            }
+
+            is PatternListContext -> {
+                if (type !is ListType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                pattern.patterns.flatMap { getVariablesInfoFromPattern(it, type.contentType) }
+            }
+
+            is PatternConsContext -> {
+                if (type !is ListType) {
+                    ErrorUnexpectedPatternForType(type, pattern).report(parser)
+                }
+                buildList {
+                    addAll(getVariablesInfoFromPattern(pattern.head, type.contentType))
+                    addAll(getVariablesInfoFromPattern(pattern.tail, type))
+                }
+            }
+
+            else -> throw IllegalStateException()
         }
     }
 
@@ -706,11 +705,24 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitLet(ctx: LetContext): Type {
-        val patternBinding = ctx.patternBinding
-        val patternBindingType = typesContext.runWithExpectedType(null) { patternBinding.expr().accept(this) }
-        val patternBindingName = (patternBinding.pattern() as PatternVarContext).name.text
+        val variables = mutableListOf<Pair<String, Type>>()
 
-        return typesContext.runWithTypeInfo(patternBindingName, patternBindingType) {
+        for (patternBinding in ctx.patternBindings) {
+            val patternBindingType = typesContext.runWithExpectedType(null) {
+                patternBinding.expr().accept(this)
+            }
+            val vars = getVariablesInfoFromPattern(patternBinding.pattern(), patternBindingType)
+
+            val duplicate = variables.map { it.first }.groupingBy { it }.eachCount().asIterable()
+                .firstOrNull { it.value > 1 }
+            if (duplicate != null) {
+                ErrorDuplicatePatternVariable(patternBinding.pattern(), duplicate.key).report(parser)
+            }
+
+            variables.addAll(vars)
+        }
+
+        return typesContext.runWithTypesInfo(variables) {
             ctx.expr().accept(this)
         }
     }
