@@ -310,6 +310,16 @@ data class ErrorAmbiguousList(val expression: ExprContext) : Error {
     }
 }
 
+data class ErrorAmbiguousPatternType(val pattern: PatternContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_AMBIGUOUS_PATTERN_TYPE:
+             невозможно определить тип для паттерна
+             ${pattern.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
 data class ErrorIllegalEmptyMatching(val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """

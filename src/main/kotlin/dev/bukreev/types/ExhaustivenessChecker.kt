@@ -3,7 +3,8 @@ package dev.bukreev.types
 import dev.bukreev.types.parsing.stellaParser.*
 
 object ExhaustivenessChecker {
-    fun isExhaustive(patterns: List<PatternContext>, expressionType: Type): Boolean {
+    fun isExhaustive(patternList: List<PatternContext>, expressionType: Type): Boolean {
+        val patterns = patternList.map { if (it is PatternAscContext) it.pattern() else it }
         if (patterns.any { it is PatternVarContext }) return true
 
         return when (expressionType) {

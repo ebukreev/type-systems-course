@@ -558,6 +558,8 @@ class TypeChecker(private val parser: stellaParser,
                 }
             }
 
+            is PatternAscContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
+
             else -> throw IllegalStateException()
         }
     }
@@ -619,7 +621,42 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitLetRec(ctx: LetRecContext): Type {
-        TODO("Not yet implemented")
+        val variables = mutableListOf<Pair<String, Type>>()
+
+        for (patternBinding in ctx.patternBindings) {
+            val pattern = patternBinding.pattern()
+            if (pattern !is PatternAscContext) {
+                ErrorAmbiguousPatternType(patternBinding.pattern()).report(parser)
+            }
+
+            val expectedPatternType = pattern.stellatype().accept(this)
+            val vars = getVariablesInfoFromPattern(patternBinding.pattern(), expectedPatternType)
+
+            val duplicate = vars.map { it.first }.groupingBy { it }.eachCount().asIterable()
+                .firstOrNull { it.value > 1 }
+            if (duplicate != null) {
+                ErrorDuplicatePatternVariable(patternBinding.pattern(), duplicate.key).report(parser)
+            }
+            variables.addAll(vars)
+
+            val patternBindingType = typesContext.runWithExpectedType(expectedPatternType) {
+                typesContext.runWithTypesInfo(variables) {
+                    patternBinding.expr().accept(this)
+                }
+            }
+
+            if (!isUnifiable(expectedPatternType, patternBindingType)) {
+                ErrorUnexpectedPatternForType(patternBindingType, pattern).report(parser)
+            }
+
+            if (!ExhaustivenessChecker.isExhaustive(listOf(patternBinding.pattern()), patternBindingType)) {
+                ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
+            }
+        }
+
+        return typesContext.runWithTypesInfo(variables) {
+            ctx.expr().accept(this)
+        }
     }
 
     override fun visitLogicOr(ctx: LogicOrContext): Type {
@@ -720,7 +757,7 @@ class TypeChecker(private val parser: stellaParser,
 
             val vars = getVariablesInfoFromPattern(patternBinding.pattern(), patternBindingType)
 
-            val duplicate = variables.map { it.first }.groupingBy { it }.eachCount().asIterable()
+            val duplicate = vars.map { it.first }.groupingBy { it }.eachCount().asIterable()
                 .firstOrNull { it.value > 1 }
             if (duplicate != null) {
                 ErrorDuplicatePatternVariable(patternBinding.pattern(), duplicate.key).report(parser)
@@ -788,6 +825,10 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitPatternVariant(ctx: PatternVariantContext): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun visitPatternAsc(ctx: PatternAscContext?): Type {
         TODO("Not yet implemented")
     }
 
