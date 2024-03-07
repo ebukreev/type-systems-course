@@ -3,8 +3,8 @@ package dev.bukreev.types
 import dev.bukreev.types.parsing.stellaParser.*
 
 object ExhaustivenessChecker {
-    fun isExhaustive(patternList: List<PatternContext>, expressionType: Type): Boolean {
-        val patterns = patternList.map { if (it is PatternAscContext) it.pattern() else it }
+    fun isExhaustive(patternList: List<PatternContext>, expressionType: Type, typeChecker: TypeChecker): Boolean {
+        val patterns = patternList.map { unwrapPattern(it, typeChecker).first }
         if (patterns.any { it is PatternVarContext }) return true
 
         return when (expressionType) {
@@ -23,7 +23,7 @@ object ExhaustivenessChecker {
                     .filter { it.patterns.size == expressionType.types.size }
 
                 expressionType.types.withIndex().all {
-                    isExhaustive(tuplePatterns.map { p -> p.patterns[it.index] }, it.value)
+                    isExhaustive(tuplePatterns.map { p -> p.patterns[it.index] }, it.value, typeChecker)
                 }
             }
 
@@ -36,7 +36,7 @@ object ExhaustivenessChecker {
                         .filter { it.size == expressionType.fields.size && it.any { lp -> lp.label.text == field.first } }
                         .map { it.first { lp -> lp.label.text == field.first }.pattern() }
 
-                    isExhaustive(labelPatterns, field.second)
+                    isExhaustive(labelPatterns, field.second, typeChecker)
                 }
             }
 
@@ -46,7 +46,7 @@ object ExhaustivenessChecker {
                 val inrs = patterns.filterIsInstance<PatternInrContext>()
                     .map { it.pattern() }
 
-                return isExhaustive(inls, expressionType.inl) && isExhaustive(inrs, expressionType.inr)
+                return isExhaustive(inls, expressionType.inl, typeChecker) && isExhaustive(inrs, expressionType.inr, typeChecker)
             }
 
             is VariantType -> {
@@ -57,17 +57,32 @@ object ExhaustivenessChecker {
                     if (varType != null) {
                         isExhaustive(variantPatterns.filter { p -> p.label.text == it.first }
                             .mapNotNull { p -> p.pattern() },
-                            varType)
+                            varType, typeChecker)
                     } else {
                         variantPatterns.any { p -> p.label.text == it.first }
                     }
                 }
             }
 
-            is ListType -> checkListTypeExhaustiveness(patterns, expressionType.contentType)
+            is ListType -> checkListTypeExhaustiveness(patterns, expressionType.contentType, typeChecker)
 
             is FuncType -> false
         }
+    }
+
+    fun unwrapPattern(pattern: PatternContext, typeChecker: TypeChecker): Pair<PatternContext, Type?> {
+        var resultPattern = pattern
+        var type : Type? = null
+        while (resultPattern is ParenthesisedPatternContext || resultPattern is PatternAscContext) {
+            if (resultPattern is ParenthesisedPatternContext) {
+                resultPattern = resultPattern.pattern()
+            } else if (resultPattern is PatternAscContext) {
+                type = resultPattern.stellatype().accept(typeChecker)
+                resultPattern = resultPattern.pattern()
+            }
+        }
+
+        return Pair(resultPattern, type)
     }
 
     private fun checkNatExhaustiveness(patterns: List<PatternContext>): Boolean {
@@ -101,7 +116,7 @@ object ExhaustivenessChecker {
         return (0..<leftmostSucc).all { anotherNumbers.contains(it) }
     }
 
-    private fun checkListTypeExhaustiveness(patterns: List<PatternContext>, contentType: Type): Boolean {
+    private fun checkListTypeExhaustiveness(patterns: List<PatternContext>, contentType: Type, visitor: TypeChecker): Boolean {
         data class ListPatternInfo(val nestedPatterns: List<PatternContext>, val size: Int, val hasVarAtEnd: Boolean)
 
         fun getPatternInfo(ctx: PatternContext): ListPatternInfo {
@@ -141,7 +156,7 @@ object ExhaustivenessChecker {
         for (i in 1..smallestSizeWithVarAtEnd) {
             val patternsWithSize = patternsInfo.filter { it.size == i }
             for (j in 0..<i) {
-                if (!isExhaustive(patternsWithSize.map { it.nestedPatterns[j] }, contentType)) {
+                if (!isExhaustive(patternsWithSize.map { it.nestedPatterns[j] }, contentType, visitor)) {
                     return false
                 }
             }

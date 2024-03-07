@@ -42,8 +42,11 @@ class TypeChecker(private val parser: stellaParser,
         var mainFunctionType: Type? = null
         for (decl in ctx.decls) {
             val type = decl.accept(this)
-            if (decl is DeclFunContext && decl.name.text == "main") {
-                mainFunctionType = type
+            if (decl is DeclFunContext) {
+                typesContext.addTypeInfo(decl.name.text, type)
+                if (decl.name.text == "main") {
+                    mainFunctionType = type
+                }
             }
         }
 
@@ -73,8 +76,7 @@ class TypeChecker(private val parser: stellaParser,
         val returnType = ctx.returnType.accept(this)
         val funcType = FuncType(paramsInfo.map { it.second }, returnType)
 
-        typesContext.addTypeInfo(ctx.name.text, funcType)
-        return typesContext.runWithTypesInfo<Type>(paramsInfo) {
+        return typesContext.runWithTypesInfo<Type>(paramsInfo.plus(Pair(ctx.name.text, funcType))) {
             val nestedFunctions = ctx.localDecls.filterIsInstance<DeclFunContext>().map {
                 Pair(it.name.text, it.accept(this))
             }
@@ -420,7 +422,7 @@ class TypeChecker(private val parser: stellaParser,
             ErrorIllegalEmptyMatching(ctx).report(parser)
         }
 
-        val isExhaustive = ExhaustivenessChecker.isExhaustive(cases.map { it.pattern() }, expressionType)
+        val isExhaustive = ExhaustivenessChecker.isExhaustive(cases.map { it.pattern() }, expressionType, this)
         val casesType = processMatchCase(cases.first(), expressionType)
 
         cases.drop(1).forEach {
@@ -624,13 +626,13 @@ class TypeChecker(private val parser: stellaParser,
         val variables = mutableListOf<Pair<String, Type>>()
 
         for (patternBinding in ctx.patternBindings) {
-            val pattern = patternBinding.pattern()
-            if (pattern !is PatternAscContext) {
+            val (pattern, expectedPatternType) = ExhaustivenessChecker.unwrapPattern(patternBinding.pattern(), this)
+
+            if (expectedPatternType == null) {
                 ErrorAmbiguousPatternType(patternBinding.pattern()).report(parser)
             }
 
-            val expectedPatternType = pattern.stellatype().accept(this)
-            val vars = getVariablesInfoFromPattern(patternBinding.pattern(), expectedPatternType)
+            val vars = getVariablesInfoFromPattern(pattern, expectedPatternType)
 
             val duplicate = vars.map { it.first }.groupingBy { it }.eachCount().asIterable()
                 .firstOrNull { it.value > 1 }
@@ -649,7 +651,7 @@ class TypeChecker(private val parser: stellaParser,
                 ErrorUnexpectedPatternForType(patternBindingType, pattern).report(parser)
             }
 
-            if (!ExhaustivenessChecker.isExhaustive(listOf(patternBinding.pattern()), patternBindingType)) {
+            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
                 ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
             }
         }
@@ -745,22 +747,28 @@ class TypeChecker(private val parser: stellaParser,
         val variables = mutableListOf<Pair<String, Type>>()
 
         for (patternBinding in ctx.patternBindings) {
-            val patternBindingType = typesContext.runWithExpectedType(null) {
+            val (pattern, expectedPatternType) = ExhaustivenessChecker.unwrapPattern(patternBinding.pattern(), this)
+
+            val patternBindingType = typesContext.runWithExpectedType(expectedPatternType) {
                 typesContext.runWithTypesInfo(variables) {
                     patternBinding.expr().accept(this)
                 }
             }
 
-            if (!ExhaustivenessChecker.isExhaustive(listOf(patternBinding.pattern()), patternBindingType)) {
+            if (expectedPatternType != null && !isUnifiable(patternBindingType, expectedPatternType)) {
+                ErrorUnexpectedPatternForType(expectedPatternType, pattern).report(parser)
+            }
+
+            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
                 ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
             }
 
-            val vars = getVariablesInfoFromPattern(patternBinding.pattern(), patternBindingType)
+            val vars = getVariablesInfoFromPattern(pattern, patternBindingType)
 
             val duplicate = vars.map { it.first }.groupingBy { it }.eachCount().asIterable()
                 .firstOrNull { it.value > 1 }
             if (duplicate != null) {
-                ErrorDuplicatePatternVariable(patternBinding.pattern(), duplicate.key).report(parser)
+                ErrorDuplicatePatternVariable(pattern, duplicate.key).report(parser)
             }
 
             variables.addAll(vars)
@@ -805,7 +813,7 @@ class TypeChecker(private val parser: stellaParser,
         }
         val expectedListType = ListType(headType)
         val tailType = typesContext.runWithExpectedType(expectedListType) { ctx.tail.accept(this) }
-        if (isUnifiable(expectedListType, tailType)) {
+        if (!isUnifiable(expectedListType, tailType)) {
             ErrorUnexpectedTypeForExpression(expectedListType, tailType, ctx).report(parser)
         }
 
