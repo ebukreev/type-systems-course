@@ -1,15 +1,16 @@
 package dev.bukreev.types
 
 import java.lang.StringBuilder
-
+import java.util.*
 
 fun main() {
     val sb = StringBuilder()
-    var line = readlnOrNull()
-    while (line != null) {
-        sb.append(line)
-        line = readlnOrNull()
+    val scanner = Scanner(System.`in`)
+    scanner.useDelimiter(System.lineSeparator())
+    while (scanner.hasNext()) {
+        sb.appendLine(scanner.next())
     }
+    scanner.close()
 
     val parser = Parser.parse(sb.toString())
     parser.program().accept(TypeChecker(parser))
