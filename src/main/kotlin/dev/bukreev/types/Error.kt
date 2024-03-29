@@ -490,3 +490,13 @@ data class ErrorUnexpectedMemoryAddress(val expr: ExprContext, val type: Type) :
        """.trimIndent()
     }
 }
+
+data class ErrorAmbiguousPanicType(val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_AMBIGUOUS_PANIC_TYPE:
+             неоднозначный тип ошибки
+                ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}

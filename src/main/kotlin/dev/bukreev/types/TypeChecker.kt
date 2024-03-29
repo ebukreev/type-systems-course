@@ -390,7 +390,7 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitPanic(ctx: PanicContext): Type {
-        TODO("Not yet implemented")
+        return typesContext.getExpectedType() ?: ErrorAmbiguousPanicType(ctx).report(parser)
     }
 
     override fun visitLessThanOrEqual(ctx: LessThanOrEqualContext): Type {
