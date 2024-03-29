@@ -457,3 +457,36 @@ data class ErrorUnexpectedNullaryVariantPattern(val expr: PatternContext, val ty
        """.trimIndent()
     }
 }
+
+data class ErrorAmbiguousReferenceType(val expr: ConstMemoryContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_AMBIGUOUS_REFERENCE_TYPE:
+             неоднозначный тип адреса памяти
+                ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorNotAReference(val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_NOT_A_REFERENCE:
+            попытка разыменовать или присвоить значение
+            выражению не ссылочного типа
+                ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedMemoryAddress(val expr: ExprContext, val type: Type) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_MEMORY_ADDRESS:
+             адрес памяти
+                ${expr.toStringTree(parser)}
+             используется там, где ожидается тип, отличный от типа-ссылки
+                $type
+       """.trimIndent()
+    }
+}

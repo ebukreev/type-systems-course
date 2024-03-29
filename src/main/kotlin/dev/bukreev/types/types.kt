@@ -58,6 +58,12 @@ data class VariantType(val variants: List<Pair<String, Type?>>) : Type {
     }
 }
 
+data class RefType(val nestedType: Type) : Type {
+    override fun toString(): String {
+        return "&$nestedType"
+    }
+}
+
 fun isUnifiable(fst: Type, snd: Type): Boolean {
     return fst == snd
 }

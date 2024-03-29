@@ -185,7 +185,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitConstMemory(ctx: ConstMemoryContext): Type {
-        TODO("Not yet implemented")
+        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousReferenceType(ctx).report(parser)
+        if (expectedType !is RefType) {
+            ErrorUnexpectedMemoryAddress(ctx, expectedType).report(parser)
+        }
+
+        return expectedType
     }
 
     override fun visitList(ctx: ListContext): Type {
@@ -365,7 +370,14 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitDeref(ctx: DerefContext): Type {
-        TODO("Not yet implemented")
+        val expressionType = typesContext.runWithExpectedType(typesContext.getExpectedType()?.let { RefType(it) }) {
+            ctx.expr().accept(this)
+        }
+        if (expressionType !is RefType) {
+            ErrorNotAReference(ctx).report(parser)
+        }
+
+        return expressionType.nestedType
     }
 
     override fun visitIsEmpty(ctx: IsEmptyContext): Type {
@@ -716,7 +728,10 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitRef(ctx: RefContext): Type {
-        TODO("Not yet implemented")
+        val nestedType = typesContext.runWithExpectedType((typesContext.getExpectedType() as? RefType)?.nestedType) {
+            ctx.expr().accept(this)
+        }
+        return RefType(nestedType)
     }
 
     override fun visitDotTuple(ctx: DotTupleContext): Type {
@@ -785,7 +800,17 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitAssign(ctx: AssignContext): Type {
-        TODO("Not yet implemented")
+        val leftType = typesContext.runWithExpectedType(null) { ctx.lhs.accept(this) }
+        if (leftType !is RefType) {
+            ErrorNotAReference(ctx).report(parser)
+        }
+
+        val rightType = typesContext.runWithExpectedType(leftType.nestedType) { ctx.rhs.accept(this) }
+        if (!isUnifiable(leftType.nestedType, rightType)) {
+            ErrorUnexpectedTypeForExpression(leftType.nestedType, rightType, ctx).report(parser)
+        }
+
+        return UnitType
     }
 
     override fun visitTuple(ctx: TupleContext): Type {
@@ -914,7 +939,7 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTypeRef(ctx: TypeRefContext): Type {
-        TODO("Not yet implemented")
+        return RefType(ctx.stellatype().accept(this))
     }
 
     override fun visitTypeRec(ctx: TypeRecContext): Type {
