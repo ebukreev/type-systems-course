@@ -240,7 +240,12 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitSequence(ctx: SequenceContext): Type {
-        TODO("Not yet implemented")
+        val leftType = typesContext.runWithExpectedType(UnitType) { ctx.expr1.accept(this) }
+        if (!isUnifiable(leftType, UnitType)) {
+            ErrorUnexpectedTypeForExpression(UnitType, leftType, ctx.expr1).report(parser)
+        }
+
+        return ctx.expr2.accept(this)
     }
 
     override fun visitConstFalse(ctx: ConstFalseContext): Type {
