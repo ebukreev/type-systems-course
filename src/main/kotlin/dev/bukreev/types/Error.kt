@@ -500,3 +500,24 @@ data class ErrorAmbiguousPanicType(val expr: ExprContext) : Error {
        """.trimIndent()
     }
 }
+
+data class ErrorExceptionTypeNotDeclared(val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_EXCEPTION_TYPE_NOT_DECLARED:
+              в программе используются исключения, 
+              но не объявлен их тип
+                ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorAmbiguousThrowType(val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_AMBIGUOUS_THROW_TYPE:
+             неоднозначный тип throw выражения
+                ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}

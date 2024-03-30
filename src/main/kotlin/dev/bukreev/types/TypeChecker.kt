@@ -8,8 +8,11 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.antlr.v4.runtime.tree.RuleNode
 import org.antlr.v4.runtime.tree.TerminalNode
 
-class TypeChecker(private val parser: stellaParser,
-                  private val typesContext: TypesContext = TypesContext()) : stellaParserVisitor<Type> {
+class TypeChecker(
+    private val parser: stellaParser,
+    private val typesContext: TypesContext = TypesContext(),
+    private val exceptionsContext: ExceptionsContext = ExceptionsContext()
+) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
         TODO("Not yet implemented")
     }
@@ -106,7 +109,10 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitDeclExceptionType(ctx: DeclExceptionTypeContext): Type {
-        TODO("Not yet implemented")
+        val type = ctx.exceptionType.accept(this)
+        exceptionsContext.declaredExceptionsType = type
+
+        return type
     }
 
     override fun visitDeclExceptionVariant(ctx: DeclExceptionVariantContext): Type {
@@ -177,7 +183,15 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitThrow(ctx: ThrowContext): Type {
-        TODO("Not yet implemented")
+        val declaredExceptionType = exceptionsContext.declaredExceptionsType
+            ?: ErrorExceptionTypeNotDeclared(ctx).report(parser)
+
+        val exprType = typesContext.runWithExpectedType(declaredExceptionType) { ctx.expr().accept(this) }
+        if (!isUnifiable(declaredExceptionType, exprType)) {
+            ErrorUnexpectedTypeForExpression(declaredExceptionType, exprType, ctx).report(parser)
+        }
+
+        return typesContext.getExpectedType() ?: ErrorAmbiguousThrowType(ctx).report(parser)
     }
 
     override fun visitMultiply(ctx: MultiplyContext): Type {
@@ -220,7 +234,19 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTryCatch(ctx: TryCatchContext): Type {
-        TODO("Not yet implemented")
+        val tryType = ctx.tryExpr.accept(this)
+        val variablesFromPattern = getVariablesInfoFromPattern(ctx.pattern(),
+            exceptionsContext.declaredExceptionsType ?: ErrorExceptionTypeNotDeclared(ctx).report(parser))
+
+        val fallbackType = typesContext.runWithTypesInfo(variablesFromPattern) {
+            typesContext.runWithExpectedType(tryType) { ctx.fallbackExpr.accept(this) }
+        }
+
+        if (!isUnifiable(tryType, fallbackType)) {
+            ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
+        }
+
+        return tryType
     }
 
     override fun visitHead(ctx: HeadContext): Type {
@@ -683,7 +709,14 @@ class TypeChecker(private val parser: stellaParser,
     }
 
     override fun visitTryWith(ctx: TryWithContext): Type {
-        TODO("Not yet implemented")
+        val tryType = ctx.tryExpr.accept(this)
+        val fallbackType = typesContext.runWithExpectedType(tryType) { ctx.fallbackExpr.accept(this) }
+
+        if (!isUnifiable(tryType, fallbackType)) {
+            ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
+        }
+
+        return tryType
     }
 
     override fun visitPred(ctx: PredContext): Type {
