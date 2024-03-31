@@ -64,6 +64,6 @@ data class RefType(val nestedType: Type) : Type {
     }
 }
 
-fun isUnifiable(fst: Type, snd: Type): Boolean {
-    return fst == snd
+fun Type.isApplicable(expected: Type): Boolean {
+    return this == expected
 }

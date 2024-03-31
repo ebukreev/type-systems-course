@@ -86,7 +86,7 @@ class TypeChecker(
             typesContext.runWithTypesInfo(nestedFunctions) {
                 typesContext.runWithExpectedType(returnType) {
                     val returnExpressionType = ctx.returnExpr.accept(this)
-                    if (!isUnifiable(returnType, returnExpressionType)) {
+                    if (!returnExpressionType.isApplicable(returnType)) {
                         ErrorUnexpectedTypeForExpression(
                             returnType,
                             returnExpressionType,
@@ -187,7 +187,7 @@ class TypeChecker(
             ?: ErrorExceptionTypeNotDeclared(ctx).report(parser)
 
         val exprType = typesContext.runWithExpectedType(declaredExceptionType) { ctx.expr().accept(this) }
-        if (!isUnifiable(declaredExceptionType, exprType)) {
+        if (!exprType.isApplicable(declaredExceptionType)) {
             ErrorUnexpectedTypeForExpression(declaredExceptionType, exprType, ctx).report(parser)
         }
 
@@ -224,7 +224,7 @@ class TypeChecker(
         typesContext.runWithExpectedType(firstElemType) {
             ctx.exprs.drop(1).forEach {
                 val exprType = it.accept(this)
-                if (!isUnifiable(firstElemType, exprType)) {
+                if (!exprType.isApplicable(firstElemType)) {
                     ErrorUnexpectedTypeForExpression(firstElemType, exprType, ctx).report(parser)
                 }
             }
@@ -242,7 +242,7 @@ class TypeChecker(
             typesContext.runWithExpectedType(tryType) { ctx.fallbackExpr.accept(this) }
         }
 
-        if (!isUnifiable(tryType, fallbackType)) {
+        if (!fallbackType.isApplicable(tryType)) {
             ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
         }
 
@@ -272,7 +272,7 @@ class TypeChecker(
 
     override fun visitSequence(ctx: SequenceContext): Type {
         val leftType = typesContext.runWithExpectedType(UnitType) { ctx.expr1.accept(this) }
-        if (!isUnifiable(leftType, UnitType)) {
+        if (!leftType.isApplicable(UnitType)) {
             ErrorUnexpectedTypeForExpression(UnitType, leftType, ctx.expr1).report(parser)
         }
 
@@ -301,7 +301,7 @@ class TypeChecker(
             val expectedParamType = expectedArgTypes?.get(i)
             val paramType = typesContext.runWithExpectedType(expectedParamType) { params[i].stellatype().accept(this) }
 
-            if (expectedParamType != null && !isUnifiable(paramType, expectedParamType)) {
+            if (expectedParamType != null && !paramType.isApplicable(expectedParamType)) {
                 ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
             }
 
@@ -338,7 +338,7 @@ class TypeChecker(
         if (ctx.rhs != null) {
             val variantType = typesContext.runWithExpectedType(expectedLabel.second) { ctx.rhs.accept(this) }
 
-            if (!isUnifiable(expectedLabel.second!!, variantType)) {
+            if (!variantType.isApplicable(expectedLabel.second!!)) {
                 ErrorUnexpectedTypeForExpression(expectedLabel.second!!, variantType, ctx).report(parser)
             }
         }
@@ -367,7 +367,7 @@ class TypeChecker(
         val thenType = ctx.thenExpr.accept(this)
         val elseType = ctx.elseExpr.accept(this)
 
-        if (!isUnifiable(thenType, elseType)) {
+        if (!elseType.isApplicable(thenType)) {
             ErrorUnexpectedTypeForExpression(thenType, elseType, ctx).report(parser)
         }
 
@@ -387,7 +387,7 @@ class TypeChecker(
         for (i in funType.argTypes.indices) {
             val expectedType = funType.argTypes[i]
             val exprType = typesContext.runWithExpectedType(expectedType) { ctx.args[i].accept(this) }
-            if (!isUnifiable(expectedType, exprType)) {
+            if (!exprType.isApplicable(expectedType)) {
                 ErrorUnexpectedTypeForExpression(expectedType, exprType, ctx).report(parser)
             }
         }
@@ -470,7 +470,7 @@ class TypeChecker(
 
         cases.drop(1).forEach {
             val caseType = processMatchCase(it, expressionType)
-            if (!isUnifiable(casesType, caseType)) {
+            if (!caseType.isApplicable(casesType)) {
                 ErrorUnexpectedTypeForExpression(casesType, caseType, ctx).report(parser)
             }
         }
@@ -690,7 +690,7 @@ class TypeChecker(
                 }
             }
 
-            if (!isUnifiable(expectedPatternType, patternBindingType)) {
+            if (!patternBindingType.isApplicable(expectedPatternType)) {
                 ErrorUnexpectedPatternForType(patternBindingType, pattern).report(parser)
             }
 
@@ -712,7 +712,7 @@ class TypeChecker(
         val tryType = ctx.tryExpr.accept(this)
         val fallbackType = typesContext.runWithExpectedType(tryType) { ctx.fallbackExpr.accept(this) }
 
-        if (!isUnifiable(tryType, fallbackType)) {
+        if (!fallbackType.isApplicable(tryType)) {
             ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
         }
 
@@ -732,7 +732,7 @@ class TypeChecker(
         val expectedType = ctx.stellatype().accept(this)
         val expressionType = typesContext.runWithExpectedType(expectedType) { ctx.expr().accept(this) }
 
-        if (!isUnifiable(expectedType, expressionType)) {
+        if (!expressionType.isApplicable(expectedType)) {
             ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
         }
 
@@ -749,7 +749,7 @@ class TypeChecker(
         val expectedSType = FuncType(listOf(NatType), FuncType(listOf(zType), zType))
         val sType = typesContext.runWithExpectedType(expectedSType) { ctx.step.accept(this) }
 
-        if (!isUnifiable(expectedSType, sType)) {
+        if (!sType.isApplicable(expectedSType)) {
             ErrorUnexpectedTypeForExpression(expectedSType, sType, ctx).report(parser)
         }
 
@@ -789,7 +789,7 @@ class TypeChecker(
         }
 
         val expectedType = FuncType(expressionType.argTypes, expressionType.argTypes.first())
-        if (!isUnifiable(expectedType, expressionType)) {
+        if (!expressionType.isApplicable(expectedType)) {
             ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
         }
 
@@ -808,7 +808,7 @@ class TypeChecker(
                 }
             }
 
-            if (expectedPatternType != null && !isUnifiable(patternBindingType, expectedPatternType)) {
+            if (expectedPatternType != null && !patternBindingType.isApplicable(expectedPatternType)) {
                 ErrorUnexpectedPatternForType(expectedPatternType, pattern).report(parser)
             }
 
@@ -839,7 +839,7 @@ class TypeChecker(
         }
 
         val rightType = typesContext.runWithExpectedType(leftType.nestedType) { ctx.rhs.accept(this) }
-        if (!isUnifiable(leftType.nestedType, rightType)) {
+        if (!rightType.isApplicable(leftType.nestedType)) {
             ErrorUnexpectedTypeForExpression(leftType.nestedType, rightType, ctx).report(parser)
         }
 
@@ -876,7 +876,7 @@ class TypeChecker(
         }
         val expectedListType = ListType(headType)
         val tailType = typesContext.runWithExpectedType(expectedListType) { ctx.tail.accept(this) }
-        if (!isUnifiable(expectedListType, tailType)) {
+        if (!tailType.isApplicable(expectedListType)) {
             ErrorUnexpectedTypeForExpression(expectedListType, tailType, ctx).report(parser)
         }
 
