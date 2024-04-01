@@ -14,6 +14,13 @@ sealed interface Error {
     }
 }
 
+fun reportUnexpectedType(expectedType: Type, actualType: Type, expression: ExprContext, parser: stellaParser): Nothing {
+    if (ExtensionsContext.hasStructuralSubtyping()) {
+        ErrorUnexpectedSubtype(expectedType, actualType, expression).report(parser)
+    }
+    ErrorUnexpectedTypeForExpression(expectedType, actualType, expression).report(parser)
+}
+
 data object ErrorMissingMain : Error {
     override fun stringify(parser: stellaParser): String {
         return """
@@ -518,6 +525,20 @@ data class ErrorAmbiguousThrowType(val expr: ExprContext) : Error {
            ERROR_AMBIGUOUS_THROW_TYPE:
              неоднозначный тип throw выражения
                 ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorUnexpectedSubtype(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNEXPECTED_SUBTYPE:
+             ожидается подтип типа
+               $expected
+             но получен тип
+               $actual
+             для выражения
+               ${expression.toStringTree(parser)}
        """.trimIndent()
     }
 }

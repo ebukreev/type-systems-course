@@ -1,6 +1,6 @@
 package dev.bukreev.types
 
-class ExtensionsContext {
+object ExtensionsContext {
 
     private val extensions = mutableSetOf<String>()
 

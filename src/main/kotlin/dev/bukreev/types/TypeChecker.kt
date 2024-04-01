@@ -11,8 +11,7 @@ import org.antlr.v4.runtime.tree.TerminalNode
 class TypeChecker(
     private val parser: stellaParser,
     private val typesContext: TypesContext = TypesContext(),
-    private val exceptionsContext: ExceptionsContext = ExceptionsContext(),
-    private val extensionsContext: ExtensionsContext = ExtensionsContext()
+    private val exceptionsContext: ExceptionsContext = ExceptionsContext()
 ) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
         TODO("Not yet implemented")
@@ -73,7 +72,7 @@ class TypeChecker(
     }
 
     override fun visitAnExtension(ctx: AnExtensionContext): Type {
-        extensionsContext.addExtensions(ctx.extensionNames.map { it.toString() })
+        ExtensionsContext.addExtensions(ctx.extensionNames.map { it.text })
         return UnitType
     }
 
@@ -91,11 +90,12 @@ class TypeChecker(
                 typesContext.runWithExpectedType(returnType) {
                     val returnExpressionType = ctx.returnExpr.accept(this)
                     if (!returnExpressionType.isApplicable(returnType)) {
-                        ErrorUnexpectedTypeForExpression(
+                        reportUnexpectedType(
                             returnType,
                             returnExpressionType,
-                            ctx.returnExpr
-                        ).report(parser)
+                            ctx.returnExpr,
+                            parser
+                        )
                     }
 
                     funcType
@@ -142,7 +142,7 @@ class TypeChecker(
     override fun visitIsZero(ctx: IsZeroContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report(parser)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return BoolType
@@ -192,7 +192,7 @@ class TypeChecker(
 
         val exprType = typesContext.runWithExpectedType(declaredExceptionType) { ctx.expr().accept(this) }
         if (!exprType.isApplicable(declaredExceptionType)) {
-            ErrorUnexpectedTypeForExpression(declaredExceptionType, exprType, ctx).report(parser)
+            reportUnexpectedType(declaredExceptionType, exprType, ctx, parser)
         }
 
         return typesContext.getExpectedType() ?: ErrorAmbiguousThrowType(ctx).report(parser)
@@ -229,7 +229,7 @@ class TypeChecker(
             ctx.exprs.drop(1).forEach {
                 val exprType = it.accept(this)
                 if (!exprType.isApplicable(firstElemType)) {
-                    ErrorUnexpectedTypeForExpression(firstElemType, exprType, ctx).report(parser)
+                    reportUnexpectedType(firstElemType, exprType, ctx, parser)
                 }
             }
         }
@@ -247,7 +247,7 @@ class TypeChecker(
         }
 
         if (!fallbackType.isApplicable(tryType)) {
-            ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
+            reportUnexpectedType(tryType, fallbackType, ctx, parser)
         }
 
         return tryType
@@ -277,7 +277,7 @@ class TypeChecker(
     override fun visitSequence(ctx: SequenceContext): Type {
         val leftType = typesContext.runWithExpectedType(UnitType) { ctx.expr1.accept(this) }
         if (!leftType.isApplicable(UnitType)) {
-            ErrorUnexpectedTypeForExpression(UnitType, leftType, ctx.expr1).report(parser)
+            reportUnexpectedType(UnitType, leftType, ctx.expr1, parser)
         }
 
         return ctx.expr2.accept(this)
@@ -343,7 +343,7 @@ class TypeChecker(
             val variantType = typesContext.runWithExpectedType(expectedLabel.second) { ctx.rhs.accept(this) }
 
             if (!variantType.isApplicable(expectedLabel.second!!)) {
-                ErrorUnexpectedTypeForExpression(expectedLabel.second!!, variantType, ctx).report(parser)
+                reportUnexpectedType(expectedLabel.second!!, variantType, ctx, parser)
             }
         }
 
@@ -365,14 +365,14 @@ class TypeChecker(
     override fun visitIf(ctx: IfContext): Type {
         val conditionType = typesContext.runWithExpectedType(BoolType) { ctx.condition.accept(this) }
         if (conditionType != BoolType) {
-            ErrorUnexpectedTypeForExpression(BoolType, conditionType, ctx).report(parser)
+            reportUnexpectedType(BoolType, conditionType, ctx, parser)
         }
 
         val thenType = ctx.thenExpr.accept(this)
         val elseType = ctx.elseExpr.accept(this)
 
         if (!elseType.isApplicable(thenType)) {
-            ErrorUnexpectedTypeForExpression(thenType, elseType, ctx).report(parser)
+            reportUnexpectedType(thenType, elseType, ctx, parser)
         }
 
         return thenType
@@ -392,7 +392,7 @@ class TypeChecker(
             val expectedType = funType.argTypes[i]
             val exprType = typesContext.runWithExpectedType(expectedType) { ctx.args[i].accept(this) }
             if (!exprType.isApplicable(expectedType)) {
-                ErrorUnexpectedTypeForExpression(expectedType, exprType, ctx).report(parser)
+                reportUnexpectedType(expectedType, exprType, ctx, parser)
             }
         }
 
@@ -430,7 +430,7 @@ class TypeChecker(
     override fun visitSucc(ctx: SuccContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report(parser)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return NatType
@@ -475,7 +475,7 @@ class TypeChecker(
         cases.drop(1).forEach {
             val caseType = processMatchCase(it, expressionType)
             if (!caseType.isApplicable(casesType)) {
-                ErrorUnexpectedTypeForExpression(casesType, caseType, ctx).report(parser)
+                reportUnexpectedType(casesType, caseType, ctx, parser)
             }
         }
 
@@ -717,7 +717,7 @@ class TypeChecker(
         val fallbackType = typesContext.runWithExpectedType(tryType) { ctx.fallbackExpr.accept(this) }
 
         if (!fallbackType.isApplicable(tryType)) {
-            ErrorUnexpectedTypeForExpression(tryType, fallbackType, ctx).report(parser)
+            reportUnexpectedType(tryType, fallbackType, ctx, parser)
         }
 
         return tryType
@@ -726,7 +726,7 @@ class TypeChecker(
     override fun visitPred(ctx: PredContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
         if (argType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, argType, ctx).report(parser)
+            reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
         return NatType
@@ -737,7 +737,7 @@ class TypeChecker(
         val expressionType = typesContext.runWithExpectedType(expectedType) { ctx.expr().accept(this) }
 
         if (!expressionType.isApplicable(expectedType)) {
-            ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
+            reportUnexpectedType(expectedType, expressionType, ctx, parser)
         }
 
         return expectedType
@@ -746,7 +746,7 @@ class TypeChecker(
     override fun visitNatRec(ctx: NatRecContext): Type {
         val nType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
         if (nType != NatType) {
-            ErrorUnexpectedTypeForExpression(NatType, nType, ctx).report(parser)
+            reportUnexpectedType(NatType, nType, ctx, parser)
         }
 
         val zType = ctx.initial.accept(this)
@@ -754,7 +754,7 @@ class TypeChecker(
         val sType = typesContext.runWithExpectedType(expectedSType) { ctx.step.accept(this) }
 
         if (!sType.isApplicable(expectedSType)) {
-            ErrorUnexpectedTypeForExpression(expectedSType, sType, ctx).report(parser)
+            reportUnexpectedType(expectedSType, sType, ctx, parser)
         }
 
         return zType
@@ -794,7 +794,7 @@ class TypeChecker(
 
         val expectedType = FuncType(expressionType.argTypes, expressionType.argTypes.first())
         if (!expressionType.isApplicable(expectedType)) {
-            ErrorUnexpectedTypeForExpression(expectedType, expressionType, ctx).report(parser)
+            reportUnexpectedType(expectedType, expressionType, ctx, parser)
         }
 
         return expectedType.argTypes.first()
@@ -844,7 +844,7 @@ class TypeChecker(
 
         val rightType = typesContext.runWithExpectedType(leftType.nestedType) { ctx.rhs.accept(this) }
         if (!rightType.isApplicable(leftType.nestedType)) {
-            ErrorUnexpectedTypeForExpression(leftType.nestedType, rightType, ctx).report(parser)
+            reportUnexpectedType(leftType.nestedType, rightType, ctx, parser)
         }
 
         return UnitType
@@ -881,7 +881,7 @@ class TypeChecker(
         val expectedListType = ListType(headType)
         val tailType = typesContext.runWithExpectedType(expectedListType) { ctx.tail.accept(this) }
         if (!tailType.isApplicable(expectedListType)) {
-            ErrorUnexpectedTypeForExpression(expectedListType, tailType, ctx).report(parser)
+            reportUnexpectedType(expectedListType, tailType, ctx, parser)
         }
 
         return expectedListType
