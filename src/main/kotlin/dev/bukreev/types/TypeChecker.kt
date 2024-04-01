@@ -11,7 +11,8 @@ import org.antlr.v4.runtime.tree.TerminalNode
 class TypeChecker(
     private val parser: stellaParser,
     private val typesContext: TypesContext = TypesContext(),
-    private val exceptionsContext: ExceptionsContext = ExceptionsContext()
+    private val exceptionsContext: ExceptionsContext = ExceptionsContext(),
+    private val extensionsContext: ExtensionsContext = ExtensionsContext()
 ) : stellaParserVisitor<Type> {
     override fun visit(tree: ParseTree): Type {
         TODO("Not yet implemented")
@@ -42,6 +43,8 @@ class TypeChecker(
     }
 
     override fun visitProgram(ctx: ProgramContext): Type {
+        ctx.extensions.forEach { it.accept(this) }
+
         var mainFunctionType: Type? = null
         for (decl in ctx.decls) {
             val type = decl.accept(this)
@@ -70,7 +73,8 @@ class TypeChecker(
     }
 
     override fun visitAnExtension(ctx: AnExtensionContext): Type {
-        TODO("Not yet implemented")
+        extensionsContext.addExtensions(ctx.extensionNames.map { it.toString() })
+        return UnitType
     }
 
     override fun visitDeclFun(ctx: DeclFunContext): Type {
