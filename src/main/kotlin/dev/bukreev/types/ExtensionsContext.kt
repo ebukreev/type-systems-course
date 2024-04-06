@@ -9,4 +9,8 @@ object ExtensionsContext {
     }
 
     fun hasStructuralSubtyping() = extensions.contains("#structural-subtyping")
+
+    fun reset() {
+        extensions.clear()
+    }
 }

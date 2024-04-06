@@ -305,7 +305,7 @@ class TypeChecker(
             val expectedParamType = expectedArgTypes?.get(i)
             val paramType = typesContext.runWithExpectedType(expectedParamType) { params[i].stellatype().accept(this) }
 
-            if (expectedParamType != null && !paramType.isApplicable(expectedParamType)) {
+            if (expectedParamType != null && !expectedParamType.isApplicable(paramType)) {
                 ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
             }
 
@@ -324,7 +324,13 @@ class TypeChecker(
     }
 
     override fun visitVariant(ctx: VariantContext): Type {
-        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousVariantType(ctx).report(parser)
+        val expectedType = typesContext.getExpectedType()
+            ?: if (ExtensionsContext.hasStructuralSubtyping()) {
+                return VariantType(listOf(ctx.label.text to
+                    ctx.rhs?.let { typesContext.runWithExpectedType(null) { it.accept(this) } }))
+            } else {
+                ErrorAmbiguousVariantType(ctx).report(parser)
+            }
         if (expectedType !is VariantType) {
             ErrorUnexpectedVariant(expectedType, ctx).report(parser)
         }
@@ -646,15 +652,34 @@ class TypeChecker(
 
         val actualType = RecordType(fields)
 
+        if (ExtensionsContext.hasStructuralSubtyping() && expected != null) {
+            if (actualType.isApplicable(expected)) {
+                return actualType
+            } else {
+                if (expected is RecordType) {
+                    val unexpectedFields = fields.map { it.first }.subtract(expected.fields.map { it.first }.toSet())
+                    if (unexpectedFields.isNotEmpty()) {
+                        ErrorUnexpectedRecordFields(expected, actualType, ctx, unexpectedFields).report(parser)
+                    }
+
+                    val missingFields = expected.fields.map { it.first }.subtract(fields.map { it.first }.toSet())
+                    if (missingFields.isNotEmpty()) {
+                        ErrorMissingRecordFields(expected, actualType, ctx, missingFields).report(parser)
+                    }
+                }
+                reportUnexpectedType(expected, actualType, ctx, parser)
+            }
+        }
+
         if ((expected as? RecordType)?.fields != null) {
             val unexpectedFields = fields.subtract(expected.fields.toSet())
             if (unexpectedFields.isNotEmpty()) {
-                ErrorUnexpectedRecordFields(expected, actualType, ctx, unexpectedFields).report(parser)
+                ErrorUnexpectedRecordFields(expected, actualType, ctx, unexpectedFields.map { it.first }.toSet()).report(parser)
             }
 
             val missingFields = expected.fields.subtract(fields.toSet())
             if (missingFields.isNotEmpty()) {
-                ErrorMissingRecordFields(expected, actualType, ctx, missingFields).report(parser)
+                ErrorMissingRecordFields(expected, actualType, ctx, missingFields.map { it.first }.toSet()).report(parser)
             }
         }
 

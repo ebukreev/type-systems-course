@@ -43,6 +43,7 @@ class TypeCheckBadTest {
 
         paths.forEach {
             try {
+                ExtensionsContext.reset()
                 buffer = StringBuilder()
                 Parser.parse(it.readText()).let { p -> p.program().accept(TypeChecker(p)) }
                 assert(false) { it.toString() }

@@ -197,7 +197,7 @@ data class ErrorUnexpectedVariant(val expectedType: Type, val expression: ExprCo
 }
 
 data class ErrorMissingRecordFields(val expected: Type?, val actual: RecordType, val expression: ExprContext,
-                                    val fields: Set<Pair<String, Type>>) : Error {
+                                    val fields: Set<String>) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_MISSING_RECORD_FIELDS:
@@ -205,7 +205,7 @@ data class ErrorMissingRecordFields(val expected: Type?, val actual: RecordType,
                $expected
              но получен тип записи
                $actual
-             в котором нет полей ${fields.joinToString(separator = ", ") { "${it.first} : ${it.second}" }}
+             в котором нет полей ${fields.joinToString(separator = ", ") }
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
@@ -213,7 +213,7 @@ data class ErrorMissingRecordFields(val expected: Type?, val actual: RecordType,
 }
 
 data class ErrorUnexpectedRecordFields(val expected: Type?, val actual: RecordType, val expression: ExprContext,
-                                        val fields: Set<Pair<String, Type>>) : Error {
+                                        val fields: Set<String>) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_RECORD_FIELDS:
@@ -221,7 +221,7 @@ data class ErrorUnexpectedRecordFields(val expected: Type?, val actual: RecordTy
                $expected
              но получен тип записи
                $actual
-             в котором есть лишние поля ${fields.joinToString(separator = ", ") { "${it.first} : ${it.second}" }}
+             в котором есть лишние поля ${fields.joinToString(separator = ", ")}
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()
