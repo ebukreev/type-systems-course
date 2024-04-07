@@ -10,6 +10,8 @@ object ExtensionsContext {
 
     fun hasStructuralSubtyping() = extensions.contains("#structural-subtyping")
 
+    fun hasAmbiguousTypeAsBottom() = extensions.contains("#ambiguous-type-as-bottom")
+
     fun reset() {
         extensions.clear()
     }

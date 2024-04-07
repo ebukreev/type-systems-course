@@ -195,7 +195,11 @@ class TypeChecker(
             reportUnexpectedType(declaredExceptionType, exprType, ctx, parser)
         }
 
-        return typesContext.getExpectedType() ?: ErrorAmbiguousThrowType(ctx).report(parser)
+        return typesContext.getExpectedType() ?:
+            if (ExtensionsContext.hasAmbiguousTypeAsBottom())
+                Bot
+            else
+                ErrorAmbiguousThrowType(ctx).report(parser)
     }
 
     override fun visitMultiply(ctx: MultiplyContext): Type {
@@ -218,7 +222,11 @@ class TypeChecker(
         }
 
         if (ctx.exprs.isEmpty()) {
-            return expected ?: ErrorAmbiguousList(ctx).report(parser)
+            return expected ?:
+                if (ExtensionsContext.hasAmbiguousTypeAsBottom())
+                    ListType(Bot)
+                else
+                    ErrorAmbiguousList(ctx).report(parser)
         }
 
         val firstElemType = typesContext.runWithExpectedType((expected as? ListType)?.contentType) {
@@ -427,7 +435,11 @@ class TypeChecker(
     }
 
     override fun visitPanic(ctx: PanicContext): Type {
-        return typesContext.getExpectedType() ?: ErrorAmbiguousPanicType(ctx).report(parser)
+        return typesContext.getExpectedType() ?:
+            if (ExtensionsContext.hasAmbiguousTypeAsBottom())
+                Bot
+            else
+                ErrorAmbiguousPanicType(ctx).report(parser)
     }
 
     override fun visitLessThanOrEqual(ctx: LessThanOrEqualContext): Type {
@@ -444,14 +456,19 @@ class TypeChecker(
     }
 
     override fun visitInl(ctx: InlContext): Type {
-        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
-        if (expectedType !is SumType) {
+        val expectedType = typesContext.getExpectedType()
+        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
+            ErrorAmbiguousSumType(ctx).report(parser)
+        }
+        if (expectedType != null && expectedType !is SumType) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
-        val leftType = typesContext.runWithExpectedType(expectedType.inl) { ctx.expr().accept(this) }
+        val leftType = typesContext.runWithExpectedType((expectedType as? SumType)?.inl) {
+            ctx.expr().accept(this)
+        }
 
-        return SumType(leftType, expectedType.inr)
+        return SumType(leftType, (expectedType as? SumType)?.inr ?: Bot)
     }
 
     override fun visitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext): Type {
@@ -459,14 +476,19 @@ class TypeChecker(
     }
 
     override fun visitInr(ctx: InrContext): Type {
-        val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousSumType(ctx).report(parser)
-        if (expectedType !is SumType) {
+        val expectedType = typesContext.getExpectedType()
+        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
+            ErrorAmbiguousSumType(ctx).report(parser)
+        }
+        if (expectedType != null && expectedType !is SumType) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
-        val rightType = typesContext.runWithExpectedType(expectedType.inr) { ctx.expr().accept(this) }
+        val rightType = typesContext.runWithExpectedType((expectedType as? SumType)?.inr) {
+            ctx.expr().accept(this)
+        }
 
-        return SumType(expectedType.inl, rightType)
+        return SumType((expectedType as? SumType)?.inl ?: Bot, rightType)
     }
 
     override fun visitMatch(ctx: MatchContext): Type {
