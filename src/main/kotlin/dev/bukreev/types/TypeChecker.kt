@@ -365,7 +365,8 @@ class TypeChecker(
     }
 
     override fun visitTypeCast(ctx: TypeCastContext): Type {
-        TODO("Not yet implemented")
+        typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
+        return ctx.stellatype().accept(this)
     }
 
     override fun visitIf(ctx: IfContext): Type {
