@@ -66,7 +66,7 @@ object ExhaustivenessChecker {
 
             is ListType -> checkListTypeExhaustiveness(patterns, expressionType.contentType, typeChecker)
 
-            is FuncType, is RefType -> false
+            is FuncType, is RefType, is Bot, is Top -> false
         }
     }
 

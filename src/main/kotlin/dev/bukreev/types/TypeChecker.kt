@@ -141,7 +141,7 @@ class TypeChecker(
 
     override fun visitIsZero(ctx: IsZeroContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (argType != NatType) {
+        if (!argType.isApplicable(NatType)) {
             reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
@@ -370,7 +370,7 @@ class TypeChecker(
 
     override fun visitIf(ctx: IfContext): Type {
         val conditionType = typesContext.runWithExpectedType(BoolType) { ctx.condition.accept(this) }
-        if (conditionType != BoolType) {
+        if (!conditionType.isApplicable(BoolType)) {
             reportUnexpectedType(BoolType, conditionType, ctx, parser)
         }
 
@@ -435,7 +435,7 @@ class TypeChecker(
 
     override fun visitSucc(ctx: SuccContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (argType != NatType) {
+        if (!argType.isApplicable(NatType)) {
             reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
@@ -750,7 +750,7 @@ class TypeChecker(
 
     override fun visitPred(ctx: PredContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (argType != NatType) {
+        if (!argType.isApplicable(NatType)) {
             reportUnexpectedType(NatType, argType, ctx, parser)
         }
 
@@ -770,7 +770,7 @@ class TypeChecker(
 
     override fun visitNatRec(ctx: NatRecContext): Type {
         val nType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (nType != NatType) {
+        if (!nType.isApplicable(NatType)) {
             reportUnexpectedType(NatType, nType, ctx, parser)
         }
 
@@ -993,7 +993,7 @@ class TypeChecker(
     }
 
     override fun visitTypeTop(ctx: TypeTopContext): Type {
-        TODO("Not yet implemented")
+        return Top
     }
 
     override fun visitTypeBool(ctx: TypeBoolContext): Type {
@@ -1029,7 +1029,7 @@ class TypeChecker(
     }
 
     override fun visitTypeBottom(ctx: TypeBottomContext): Type {
-        TODO("Not yet implemented")
+        return Bot
     }
 
     override fun visitTypeParens(ctx: TypeParensContext): Type {

@@ -64,8 +64,15 @@ data class RefType(val nestedType: Type) : Type {
     }
 }
 
+data object Top : Type
+
+data object Bot : Type
+
 fun Type.isApplicable(expected: Type): Boolean {
     if (this == expected) return true
+
+    if (this == Bot) return true
+    if (expected == Top) return true
 
     if (!ExtensionsContext.hasStructuralSubtyping()) return false
 
