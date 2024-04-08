@@ -120,7 +120,16 @@ class TypeChecker(
     }
 
     override fun visitDeclExceptionVariant(ctx: DeclExceptionVariantContext): Type {
-        TODO("Not yet implemented")
+        val type = ctx.stellatype().accept(this)
+        val label = ctx.name.text
+
+        exceptionsContext.declaredExceptionsType =
+            VariantType((
+                    (exceptionsContext.declaredExceptionsType as? VariantType)?.variants ?: emptyList())
+                    + (label to type)
+            )
+
+        return type
     }
 
     override fun visitInlineAnnotation(ctx: InlineAnnotationContext): Type {
