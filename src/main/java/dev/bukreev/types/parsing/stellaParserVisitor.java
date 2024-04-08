@@ -1,4 +1,4 @@
-// Generated from stellaParser.g4 by ANTLR 4.13.1
+// Generated from ./stellaParser.g4 by ANTLR 4.13.1
 package dev.bukreev.types.parsing;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -201,6 +201,13 @@ public interface stellaParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitTryCatch(stellaParser.TryCatchContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code TryCastAs}
+	 * labeled alternative in {@link stellaParser#expr}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTryCastAs(stellaParser.TryCastAsContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code Head}
 	 * labeled alternative in {@link stellaParser#expr}.
@@ -626,6 +633,13 @@ public interface stellaParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitPatternUnit(stellaParser.PatternUnitContext ctx);
 	/**
+	 * Visit a parse tree produced by the {@code PatternCastAs}
+	 * labeled alternative in {@link stellaParser#pattern}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitPatternCastAs(stellaParser.PatternCastAsContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link stellaParser#labelledPattern}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -666,6 +680,13 @@ public interface stellaParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitTypeRec(stellaParser.TypeRecContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code TypeAuto}
+	 * labeled alternative in {@link stellaParser#stellatype}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitTypeAuto(stellaParser.TypeAutoContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code TypeSum}
 	 * labeled alternative in {@link stellaParser#stellatype}.

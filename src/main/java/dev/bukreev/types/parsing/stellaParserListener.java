@@ -1,4 +1,4 @@
-// Generated from stellaParser.g4 by ANTLR 4.13.1
+// Generated from ./stellaParser.g4 by ANTLR 4.13.1
 package dev.bukreev.types.parsing;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -333,6 +333,18 @@ public interface stellaParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitTryCatch(stellaParser.TryCatchContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code TryCastAs}
+	 * labeled alternative in {@link stellaParser#expr}.
+	 * @param ctx the parse tree
+	 */
+	void enterTryCastAs(stellaParser.TryCastAsContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code TryCastAs}
+	 * labeled alternative in {@link stellaParser#expr}.
+	 * @param ctx the parse tree
+	 */
+	void exitTryCastAs(stellaParser.TryCastAsContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code Head}
 	 * labeled alternative in {@link stellaParser#expr}.
@@ -1060,6 +1072,18 @@ public interface stellaParserListener extends ParseTreeListener {
 	 */
 	void exitPatternUnit(stellaParser.PatternUnitContext ctx);
 	/**
+	 * Enter a parse tree produced by the {@code PatternCastAs}
+	 * labeled alternative in {@link stellaParser#pattern}.
+	 * @param ctx the parse tree
+	 */
+	void enterPatternCastAs(stellaParser.PatternCastAsContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code PatternCastAs}
+	 * labeled alternative in {@link stellaParser#pattern}.
+	 * @param ctx the parse tree
+	 */
+	void exitPatternCastAs(stellaParser.PatternCastAsContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link stellaParser#labelledPattern}.
 	 * @param ctx the parse tree
 	 */
@@ -1129,6 +1153,18 @@ public interface stellaParserListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitTypeRec(stellaParser.TypeRecContext ctx);
+	/**
+	 * Enter a parse tree produced by the {@code TypeAuto}
+	 * labeled alternative in {@link stellaParser#stellatype}.
+	 * @param ctx the parse tree
+	 */
+	void enterTypeAuto(stellaParser.TypeAutoContext ctx);
+	/**
+	 * Exit a parse tree produced by the {@code TypeAuto}
+	 * labeled alternative in {@link stellaParser#stellatype}.
+	 * @param ctx the parse tree
+	 */
+	void exitTypeAuto(stellaParser.TypeAutoContext ctx);
 	/**
 	 * Enter a parse tree produced by the {@code TypeSum}
 	 * labeled alternative in {@link stellaParser#stellatype}.

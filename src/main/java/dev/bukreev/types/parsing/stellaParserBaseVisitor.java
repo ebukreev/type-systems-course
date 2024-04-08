@@ -1,4 +1,4 @@
-// Generated from stellaParser.g4 by ANTLR 4.13.1
+// Generated from ./stellaParser.g4 by ANTLR 4.13.1
 package dev.bukreev.types.parsing;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -208,6 +208,13 @@ public class stellaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> impl
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitTryCatch(stellaParser.TryCatchContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitTryCastAs(stellaParser.TryCastAsContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
@@ -641,6 +648,13 @@ public class stellaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> impl
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitPatternCastAs(stellaParser.PatternCastAsContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitLabelledPattern(stellaParser.LabelledPatternContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
@@ -677,6 +691,13 @@ public class stellaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> impl
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitTypeRec(stellaParser.TypeRecContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitTypeAuto(stellaParser.TypeAutoContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *
