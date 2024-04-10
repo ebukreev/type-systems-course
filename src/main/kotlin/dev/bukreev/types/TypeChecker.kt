@@ -270,6 +270,20 @@ class TypeChecker(
         return tryType
     }
 
+    override fun visitTryCastAs(ctx: TryCastAsContext): Type {
+        typesContext.runWithExpectedType(null) { ctx.tryExpr.accept(this) }
+        val variablesFromPattern = getVariablesInfoFromPattern(ctx.pattern(), ctx.type_.accept(this))
+
+        val bodyType = typesContext.runWithTypesInfo(variablesFromPattern) { ctx.expr_.accept(this) }
+        val fallbackType = typesContext.runWithExpectedType(bodyType) { ctx.fallbackExpr.accept(this) }
+
+        if (!fallbackType.isApplicable(bodyType)) {
+            reportUnexpectedType(fallbackType, bodyType, ctx, parser)
+        }
+
+        return bodyType
+    }
+
     override fun visitHead(ctx: HeadContext): Type {
         val listType = typesContext.runWithExpectedType(null) { ctx.list.accept(this) }
         if (listType !is ListType) {
@@ -647,6 +661,9 @@ class TypeChecker(
 
             is PatternAscContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
 
+            is PatternCastAsContext -> getVariablesInfoFromPattern(pattern.pattern(), type).map { it.first to
+                    pattern.stellatype().accept(this) }
+
             else -> throw IllegalStateException()
         }
     }
@@ -1000,6 +1017,10 @@ class TypeChecker(
         TODO("Not yet implemented")
     }
 
+    override fun visitPatternCastAs(ctx: PatternCastAsContext): Type {
+        TODO("Not yet implemented")
+    }
+
     override fun visitPatternInt(ctx: PatternIntContext): Type {
         TODO("Not yet implemented")
     }
@@ -1037,6 +1058,10 @@ class TypeChecker(
     }
 
     override fun visitTypeRec(ctx: TypeRecContext): Type {
+        TODO("Not yet implemented")
+    }
+
+    override fun visitTypeAuto(ctx: TypeAutoContext): Type {
         TODO("Not yet implemented")
     }
 
