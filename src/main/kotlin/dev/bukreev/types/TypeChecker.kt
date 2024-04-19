@@ -217,7 +217,7 @@ class TypeChecker(
 
     override fun visitConstMemory(ctx: ConstMemoryContext): Type {
         val expectedType = typesContext.getExpectedType() ?: ErrorAmbiguousReferenceType(ctx).report(parser)
-        if (expectedType !is RefType) {
+        if (expectedType !is RefType && expectedType !is Top) {
             ErrorUnexpectedMemoryAddress(ctx, expectedType).report(parser)
         }
 
@@ -226,7 +226,7 @@ class TypeChecker(
 
     override fun visitList(ctx: ListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType) {
+        if (expected != null && expected !is ListType && expected !is Top) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
@@ -320,7 +320,7 @@ class TypeChecker(
 
     override fun visitAbstraction(ctx: AbstractionContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType != null && expectedType !is FuncType) {
+        if (expectedType != null && expectedType !is FuncType && expectedType !is Top) {
             ErrorUnexpectedLambda(expectedType, ctx).report(parser)
         }
         val expectedArgTypes = (expectedType as? FuncType)?.argTypes
@@ -337,7 +337,11 @@ class TypeChecker(
             val paramType = typesContext.runWithExpectedType(expectedParamType) { params[i].stellatype().accept(this) }
 
             if (expectedParamType != null && !expectedParamType.isApplicable(paramType)) {
-                ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
+                if (ExtensionsContext.hasStructuralSubtyping()) {
+                    ErrorUnexpectedSubtype(expectedParamType, paramType, ctx).report(parser)
+                } else {
+                    ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
+                }
             }
 
             paramsInfo.add(Pair(name, paramType))
@@ -407,7 +411,7 @@ class TypeChecker(
         }
 
         val thenType = ctx.thenExpr.accept(this)
-        val elseType = ctx.elseExpr.accept(this)
+        val elseType = typesContext.runWithExpectedType(thenType) { ctx.elseExpr.accept(this) }
 
         if (!elseType.isApplicable(thenType)) {
             reportUnexpectedType(thenType, elseType, ctx, parser)
@@ -483,7 +487,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -503,7 +507,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -687,7 +691,7 @@ class TypeChecker(
 
     override fun visitRecord(ctx: RecordContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is RecordType) {
+        if (expected != null && expected !is RecordType && expected !is Top) {
             ErrorUnexpectedRecord(expected, ctx).report(parser)
         }
 
@@ -839,10 +843,14 @@ class TypeChecker(
     }
 
     override fun visitRef(ctx: RefContext): Type {
-        val nestedType = typesContext.runWithExpectedType((typesContext.getExpectedType() as? RefType)?.nestedType) {
+        val expectedType = typesContext.getExpectedType() as? RefType
+        val nestedType = typesContext.runWithExpectedType(expectedType?.nestedType) {
             ctx.expr().accept(this)
         }
-        return RefType(nestedType)
+        if (expectedType != null && !nestedType.isApplicable(expectedType.nestedType)) {
+            reportUnexpectedType(expectedType.nestedType, nestedType, ctx, parser)
+        }
+        return expectedType ?: RefType(nestedType)
     }
 
     override fun visitDotTuple(ctx: DotTupleContext): Type {
@@ -926,7 +934,7 @@ class TypeChecker(
 
     override fun visitTuple(ctx: TupleContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is TupleType) {
+        if (expected != null && expected !is TupleType && expected !is Top) {
             ErrorUnexpectedTuple(expected, ctx).report(parser)
         }
 
@@ -945,7 +953,7 @@ class TypeChecker(
 
     override fun visitConsList(ctx: ConsListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType) {
+        if (expected != null && expected !is ListType && expected !is Top) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 

@@ -16,6 +16,43 @@ sealed interface Error {
 
 fun reportUnexpectedType(expectedType: Type, actualType: Type, expression: ExprContext, parser: stellaParser): Nothing {
     if (ExtensionsContext.hasStructuralSubtyping()) {
+
+        if (actualType is FuncType && expectedType is FuncType) {
+            if (actualType.argTypes.size != expectedType.argTypes.size) {
+                ErrorIncorrectNumberOfArguments(actualType.argTypes.size, expectedType.argTypes.size, expression).report(parser)
+            }
+        }
+
+        if (expectedType is RecordType && actualType is RecordType) {
+            val thisFields = actualType.fields.toMap()
+            val expectedFields = expectedType.fields.toMap()
+            if ((expectedFields - thisFields.keys).isNotEmpty()) {
+                ErrorMissingRecordFields(expectedType, actualType, expression,
+                    (expectedFields - thisFields.keys).map { it.key }.toSet()).report(parser)
+            }
+        }
+
+        if (actualType is TupleType && expectedType is TupleType) {
+            if (actualType.types.size != expectedType.types.size)  {
+                ErrorUnexpectedTupleLength(expectedType, expression).report(parser)
+            }
+        }
+
+        if (actualType is VariantType && expectedType is VariantType) {
+            val thisVariants = actualType.variants.toMap()
+            val expectedVariants = expectedType.variants.toMap()
+
+            if ((thisVariants - expectedVariants.keys).isNotEmpty()) {
+                ErrorUnexpectedVariantLabel((thisVariants - expectedVariants.keys).keys.first(),
+                    expectedType, expression).report(parser)
+            }
+
+            if (!thisVariants.keys.all { expectedVariants.containsKey(it) }) {
+                ErrorUnexpectedVariantLabel(thisVariants.keys.first { !expectedVariants.containsKey(it) },
+                    expectedType, expression).report(parser)
+            }
+        }
+
         ErrorUnexpectedSubtype(expectedType, actualType, expression).report(parser)
     }
     ErrorUnexpectedTypeForExpression(expectedType, actualType, expression).report(parser)
