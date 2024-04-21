@@ -665,8 +665,7 @@ class TypeChecker(
 
             is PatternAscContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
 
-            is PatternCastAsContext -> getVariablesInfoFromPattern(pattern.pattern(), type).map { it.first to
-                    pattern.stellatype().accept(this) }
+            is PatternCastAsContext -> getVariablesInfoFromPattern(pattern.pattern(), pattern.stellatype().accept(this))
 
             else -> throw IllegalStateException()
         }
