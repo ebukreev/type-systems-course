@@ -64,6 +64,14 @@ class TypeChecker(
             ErrorIncorrectArityOfMain(mainArgsSize).report(parser)
         }
 
+        try {
+            ConstraintSolver.solve(typesContext.constraintSet.toList())
+        } catch (e: SolveFailException) {
+            ErrorUnexpectedTypeForExpression(e.expected, e.actual, e.expr).report(parser)
+        } catch (e: OccursInfiniteTypeException) {
+            ErrorOccursCheckInfiniteType(e.expected, e.actual, e.expr).report(parser)
+        }
+
         return mainFunctionType
     }
 
@@ -89,13 +97,17 @@ class TypeChecker(
             typesContext.runWithTypesInfo(nestedFunctions) {
                 typesContext.runWithExpectedType(returnType) {
                     val returnExpressionType = ctx.returnExpr.accept(this)
-                    if (!returnExpressionType.isApplicable(returnType)) {
-                        reportUnexpectedType(
-                            returnType,
-                            returnExpressionType,
-                            ctx.returnExpr,
-                            parser
-                        )
+                    if (ExtensionsContext.hasTypeReconstruction()) {
+                        typesContext.constraintSet.add(Constraint(returnExpressionType, returnType, ctx.returnExpr))
+                    } else {
+                        if (!returnExpressionType.isApplicable(returnType)) {
+                            reportUnexpectedType(
+                                returnType,
+                                returnExpressionType,
+                                ctx.returnExpr,
+                                parser
+                            )
+                        }
                     }
 
                     funcType
@@ -150,8 +162,12 @@ class TypeChecker(
 
     override fun visitIsZero(ctx: IsZeroContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (!argType.isApplicable(NatType)) {
-            reportUnexpectedType(NatType, argType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(argType, NatType, ctx))
+        } else {
+            if (!argType.isApplicable(NatType)) {
+                reportUnexpectedType(NatType, argType, ctx, parser)
+            }
         }
 
         return BoolType
@@ -226,11 +242,14 @@ class TypeChecker(
 
     override fun visitList(ctx: ListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top) {
+        if (expected != null && expected !is ListType && expected !is Top && expected !is TypeVariable) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
         if (ctx.exprs.isEmpty()) {
+            if (ExtensionsContext.hasTypeReconstruction()) {
+                return ListType(TypeVariable(++typesContext.typeVariablesNum))
+            }
             return expected ?:
                 if (ExtensionsContext.hasAmbiguousTypeAsBottom())
                     ListType(Bot)
@@ -245,8 +264,12 @@ class TypeChecker(
         typesContext.runWithExpectedType(firstElemType) {
             ctx.exprs.drop(1).forEach {
                 val exprType = it.accept(this)
-                if (!exprType.isApplicable(firstElemType)) {
-                    reportUnexpectedType(firstElemType, exprType, ctx, parser)
+                if (ExtensionsContext.hasTypeReconstruction()) {
+                    typesContext.constraintSet.add(Constraint(exprType, firstElemType, ctx))
+                } else {
+                    if (!exprType.isApplicable(firstElemType)) {
+                        reportUnexpectedType(firstElemType, exprType, ctx, parser)
+                    }
                 }
             }
         }
@@ -287,6 +310,11 @@ class TypeChecker(
     override fun visitHead(ctx: HeadContext): Type {
         val listType = typesContext.runWithExpectedType(null) { ctx.list.accept(this) }
         if (listType !is ListType) {
+            if (ExtensionsContext.hasTypeReconstruction() && listType is TypeVariable) {
+                val newTypeVar = TypeVariable(++typesContext.typeVariablesNum)
+                typesContext.constraintSet.add(Constraint(listType, ListType(newTypeVar), ctx))
+                return newTypeVar
+            }
             ErrorNotAList(ctx, listType).report(parser)
         }
 
@@ -320,7 +348,7 @@ class TypeChecker(
 
     override fun visitAbstraction(ctx: AbstractionContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType != null && expectedType !is FuncType && expectedType !is Top) {
+        if (expectedType != null && expectedType !is FuncType && expectedType !is Top && expectedType !is TypeVariable) {
             ErrorUnexpectedLambda(expectedType, ctx).report(parser)
         }
         val expectedArgTypes = (expectedType as? FuncType)?.argTypes
@@ -336,11 +364,15 @@ class TypeChecker(
             val expectedParamType = expectedArgTypes?.get(i)
             val paramType = typesContext.runWithExpectedType(expectedParamType) { params[i].stellatype().accept(this) }
 
-            if (expectedParamType != null && !expectedParamType.isApplicable(paramType)) {
-                if (ExtensionsContext.hasStructuralSubtyping()) {
-                    ErrorUnexpectedSubtype(expectedParamType, paramType, ctx).report(parser)
-                } else {
-                    ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
+            if (ExtensionsContext.hasTypeReconstruction() && expectedParamType != null) {
+                typesContext.constraintSet.add(Constraint(paramType, expectedParamType, ctx))
+            } else {
+                if (expectedParamType != null && !expectedParamType.isApplicable(paramType)) {
+                    if (ExtensionsContext.hasStructuralSubtyping()) {
+                        ErrorUnexpectedSubtype(expectedParamType, paramType, ctx).report(parser)
+                    } else {
+                        ErrorUnexpectedTypeForParameter(paramType, expectedParamType, ctx).report(parser)
+                    }
                 }
             }
 
@@ -406,15 +438,23 @@ class TypeChecker(
 
     override fun visitIf(ctx: IfContext): Type {
         val conditionType = typesContext.runWithExpectedType(BoolType) { ctx.condition.accept(this) }
-        if (!conditionType.isApplicable(BoolType)) {
-            reportUnexpectedType(BoolType, conditionType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(conditionType, BoolType, ctx))
+        } else {
+            if (!conditionType.isApplicable(BoolType)) {
+                reportUnexpectedType(BoolType, conditionType, ctx, parser)
+            }
         }
 
         val thenType = ctx.thenExpr.accept(this)
         val elseType = typesContext.runWithExpectedType(thenType) { ctx.elseExpr.accept(this) }
 
-        if (!elseType.isApplicable(thenType)) {
-            reportUnexpectedType(thenType, elseType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(thenType, elseType, ctx))
+        } else {
+            if (!elseType.isApplicable(thenType)) {
+                reportUnexpectedType(thenType, elseType, ctx, parser)
+            }
         }
 
         return thenType
@@ -423,22 +463,48 @@ class TypeChecker(
     override fun visitApplication(ctx: ApplicationContext): Type {
         val funType = typesContext.runWithExpectedType(null) { ctx.`fun`.accept(this) }
 
-        if (funType !is FuncType) {
-            ErrorNotAFunction(ctx.`fun`, funType).report(parser)
-        }
-
-        if (funType.argTypes.size != ctx.args.size) {
-            ErrorIncorrectNumberOfArguments(ctx.args.size, funType.argTypes.size, ctx).report(parser)
-        }
-        for (i in funType.argTypes.indices) {
-            val expectedType = funType.argTypes[i]
-            val exprType = typesContext.runWithExpectedType(expectedType) { ctx.args[i].accept(this) }
-            if (!exprType.isApplicable(expectedType)) {
-                reportUnexpectedType(expectedType, exprType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            if (funType is FuncType && funType.argTypes.size != ctx.args.size) {
+                ErrorIncorrectNumberOfArguments(ctx.args.size, funType.argTypes.size, ctx).report(parser)
             }
-        }
 
-        return funType.returnType
+            val newTypeVar = TypeVariable(++typesContext.typeVariablesNum)
+            typesContext.constraintSet.add(
+                Constraint(
+                    funType,
+                    FuncType(
+                        ctx.args.withIndex().map { (index, type) ->
+                            typesContext.runWithExpectedType(
+                                (funType as? FuncType)?.argTypes?.get(index)
+                            ) {
+                                val argType = type.accept(this)
+                                val typeVar = TypeVariable(++typesContext.typeVariablesNum)
+                                typesContext.constraintSet.add(Constraint(typeVar, argType, ctx))
+                                typeVar
+                            }
+                        }, newTypeVar
+                    ), ctx
+                )
+            )
+            return newTypeVar
+        } else {
+            if (funType !is FuncType) {
+                ErrorNotAFunction(ctx.`fun`, funType).report(parser)
+            }
+
+            if (funType.argTypes.size != ctx.args.size) {
+                ErrorIncorrectNumberOfArguments(ctx.args.size, funType.argTypes.size, ctx).report(parser)
+            }
+            for (i in funType.argTypes.indices) {
+                val expectedType = funType.argTypes[i]
+                val exprType = typesContext.runWithExpectedType(expectedType) { ctx.args[i].accept(this) }
+                if (!exprType.isApplicable(expectedType)) {
+                    reportUnexpectedType(expectedType, exprType, ctx, parser)
+                }
+            }
+
+            return funType.returnType
+        }
     }
 
     override fun visitDeref(ctx: DerefContext): Type {
@@ -454,8 +520,12 @@ class TypeChecker(
 
     override fun visitIsEmpty(ctx: IsEmptyContext): Type {
         val argType = typesContext.runWithExpectedType(null) { ctx.list.accept(this) }
-        if (argType !is ListType) {
-            ErrorNotAList(ctx, argType).report(parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(argType, ListType(TypeVariable(++typesContext.typeVariablesNum)), ctx))
+        } else {
+            if (argType !is ListType) {
+                ErrorNotAList(ctx, argType).report(parser)
+            }
         }
 
         return BoolType
@@ -475,8 +545,12 @@ class TypeChecker(
 
     override fun visitSucc(ctx: SuccContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (!argType.isApplicable(NatType)) {
-            reportUnexpectedType(NatType, argType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(argType, NatType, ctx))
+        } else {
+            if (!argType.isApplicable(NatType)) {
+                reportUnexpectedType(NatType, argType, ctx, parser)
+            }
         }
 
         return NatType
@@ -484,10 +558,10 @@ class TypeChecker(
 
     override fun visitInl(ctx: InlContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
+        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && expectedType !is TypeVariable) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -495,7 +569,12 @@ class TypeChecker(
             ctx.expr().accept(this)
         }
 
-        return SumType(leftType, (expectedType as? SumType)?.inr ?: Bot)
+        return SumType(
+            leftType,
+            (expectedType as? SumType)?.inr ?: if (ExtensionsContext.hasAmbiguousTypeAsBottom()) Bot else TypeVariable(
+                ++typesContext.typeVariablesNum
+            )
+        )
     }
 
     override fun visitGreaterThanOrEqual(ctx: GreaterThanOrEqualContext): Type {
@@ -504,10 +583,10 @@ class TypeChecker(
 
     override fun visitInr(ctx: InrContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom()) {
+        if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && expectedType !is TypeVariable) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -515,7 +594,11 @@ class TypeChecker(
             ctx.expr().accept(this)
         }
 
-        return SumType((expectedType as? SumType)?.inl ?: Bot, rightType)
+        return SumType(
+            (expectedType as? SumType)?.inl ?: if (ExtensionsContext.hasAmbiguousTypeAsBottom()) Bot else TypeVariable(
+                ++typesContext.typeVariablesNum
+            ), rightType
+        )
     }
 
     override fun visitMatch(ctx: MatchContext): Type {
@@ -530,8 +613,12 @@ class TypeChecker(
 
         cases.drop(1).forEach {
             val caseType = processMatchCase(it, expressionType)
-            if (!caseType.isApplicable(casesType)) {
-                reportUnexpectedType(casesType, caseType, ctx, parser)
+            if (ExtensionsContext.hasTypeReconstruction()) {
+                typesContext.constraintSet.add(Constraint(caseType, casesType, ctx))
+            } else {
+                if (!caseType.isApplicable(casesType)) {
+                    reportUnexpectedType(casesType, caseType, ctx, parser)
+                }
             }
         }
 
@@ -682,6 +769,11 @@ class TypeChecker(
     override fun visitTail(ctx: TailContext): Type {
         val listType = typesContext.runWithExpectedType(null) { ctx.list.accept(this) }
         if (listType !is ListType) {
+            if (ExtensionsContext.hasTypeReconstruction() && listType is TypeVariable) {
+                val newTypeVar = TypeVariable(++typesContext.typeVariablesNum)
+                typesContext.constraintSet.add(Constraint(listType, ListType(newTypeVar), ctx))
+                return newTypeVar
+            }
             ErrorNotAList(ctx, listType).report(parser)
         }
 
@@ -771,8 +863,12 @@ class TypeChecker(
                 }
             }
 
-            if (!patternBindingType.isApplicable(expectedPatternType)) {
-                ErrorUnexpectedPatternForType(patternBindingType, pattern).report(parser)
+            if (ExtensionsContext.hasTypeReconstruction()) {
+                typesContext.constraintSet.add(Constraint(patternBindingType, expectedPatternType, ctx))
+            } else {
+                if (!patternBindingType.isApplicable(expectedPatternType)) {
+                    ErrorUnexpectedPatternForType(patternBindingType, pattern).report(parser)
+                }
             }
 
             if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
@@ -802,8 +898,12 @@ class TypeChecker(
 
     override fun visitPred(ctx: PredContext): Type {
         val argType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (!argType.isApplicable(NatType)) {
-            reportUnexpectedType(NatType, argType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(argType, NatType, ctx))
+        } else {
+            if (!argType.isApplicable(NatType)) {
+                reportUnexpectedType(NatType, argType, ctx, parser)
+            }
         }
 
         return NatType
@@ -813,8 +913,12 @@ class TypeChecker(
         val expectedType = ctx.stellatype().accept(this)
         val expressionType = typesContext.runWithExpectedType(expectedType) { ctx.expr().accept(this) }
 
-        if (!expressionType.isApplicable(expectedType)) {
-            reportUnexpectedType(expectedType, expressionType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(expressionType, expectedType, ctx))
+        } else {
+            if (!expressionType.isApplicable(expectedType)) {
+                reportUnexpectedType(expectedType, expressionType, ctx, parser)
+            }
         }
 
         return expectedType
@@ -822,16 +926,24 @@ class TypeChecker(
 
     override fun visitNatRec(ctx: NatRecContext): Type {
         val nType = typesContext.runWithExpectedType(NatType) { ctx.n.accept(this) }
-        if (!nType.isApplicable(NatType)) {
-            reportUnexpectedType(NatType, nType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(nType, NatType, ctx))
+        } else {
+            if (!nType.isApplicable(NatType)) {
+                reportUnexpectedType(NatType, nType, ctx, parser)
+            }
         }
 
         val zType = ctx.initial.accept(this)
         val expectedSType = FuncType(listOf(NatType), FuncType(listOf(zType), zType))
         val sType = typesContext.runWithExpectedType(expectedSType) { ctx.step.accept(this) }
 
-        if (!sType.isApplicable(expectedSType)) {
-            reportUnexpectedType(expectedSType, sType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(sType, expectedSType, ctx))
+        } else {
+            if (!sType.isApplicable(expectedSType)) {
+                reportUnexpectedType(expectedSType, sType, ctx, parser)
+            }
         }
 
         return zType
@@ -854,16 +966,22 @@ class TypeChecker(
 
     override fun visitDotTuple(ctx: DotTupleContext): Type {
         val tupleType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
-        if (tupleType !is TupleType) {
+        if (tupleType !is TupleType && tupleType !is TypeVariable) {
             ErrorNotATuple(ctx, tupleType).report(parser)
         }
 
         val index = ctx.index.text.toInt() - 1
-        if (tupleType.types.size <= index) {
+        if (tupleType is TupleType && tupleType.types.size <= index || tupleType is TypeVariable && index >= 3) {
             ErrorTupleIndexOfBounds(ctx, index).report(parser)
         }
 
-        return tupleType.types[ctx.index.text.toInt() - 1]
+        return if (tupleType is TupleType) tupleType.types[ctx.index.text.toInt() - 1]
+            else TypeVariable(++typesContext.typeVariablesNum).also {
+                typesContext.constraintSet.add(Constraint(tupleType, TupleType(if (index == 1)
+                    listOf(it, TypeVariable(++typesContext.typeVariablesNum)) else
+                        listOf(TypeVariable(++typesContext.typeVariablesNum), it)
+                ), ctx))
+        }
     }
 
     override fun visitFix(ctx: FixContext): Type {
@@ -874,8 +992,12 @@ class TypeChecker(
         }
 
         val expectedType = FuncType(expressionType.argTypes, expressionType.argTypes.first())
-        if (!expressionType.isApplicable(expectedType)) {
-            reportUnexpectedType(expectedType, expressionType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(expressionType, expectedType, ctx))
+        } else {
+            if (!expressionType.isApplicable(expectedType)) {
+                reportUnexpectedType(expectedType, expressionType, ctx, parser)
+            }
         }
 
         return expectedType.argTypes.first()
@@ -893,8 +1015,14 @@ class TypeChecker(
                 }
             }
 
-            if (expectedPatternType != null && !patternBindingType.isApplicable(expectedPatternType)) {
-                ErrorUnexpectedPatternForType(expectedPatternType, pattern).report(parser)
+            if (ExtensionsContext.hasTypeReconstruction()) {
+                if (expectedPatternType != null) {
+                    typesContext.constraintSet.add(Constraint(patternBindingType, expectedPatternType, ctx))
+                }
+            } else {
+                if (expectedPatternType != null && !patternBindingType.isApplicable(expectedPatternType)) {
+                    ErrorUnexpectedPatternForType(expectedPatternType, pattern).report(parser)
+                }
             }
 
             if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
@@ -933,12 +1061,13 @@ class TypeChecker(
 
     override fun visitTuple(ctx: TupleContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is TupleType && expected !is Top) {
+        if (expected != null && expected !is TupleType && expected !is Top && expected !is TypeVariable) {
             ErrorUnexpectedTuple(expected, ctx).report(parser)
         }
 
-        if (expected is TupleType && expected.types.size != ctx.expr().size) {
-            ErrorUnexpectedTupleLength(expected, ctx).report(parser)
+        if (expected is TupleType && expected.types.size != ctx.expr().size ||
+                expected is TypeVariable && ctx.expr().size >= 3) {
+            ErrorUnexpectedTupleLength(if (expected is TupleType) expected.types.size else 2, ctx).report(parser)
         }
 
         val expressionTypes = mutableListOf<Type>()
@@ -952,7 +1081,7 @@ class TypeChecker(
 
     override fun visitConsList(ctx: ConsListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top) {
+        if (expected != null && expected !is ListType && expected !is Top && expected !is TypeVariable) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
@@ -961,8 +1090,12 @@ class TypeChecker(
         }
         val expectedListType = ListType(headType)
         val tailType = typesContext.runWithExpectedType(expectedListType) { ctx.tail.accept(this) }
-        if (!tailType.isApplicable(expectedListType)) {
-            reportUnexpectedType(expectedListType, tailType, ctx, parser)
+        if (ExtensionsContext.hasTypeReconstruction()) {
+            typesContext.constraintSet.add(Constraint(tailType, expectedListType, ctx))
+        } else {
+            if (!tailType.isApplicable(expectedListType)) {
+                reportUnexpectedType(expectedListType, tailType, ctx, parser)
+            }
         }
 
         return expectedListType
@@ -1069,7 +1202,7 @@ class TypeChecker(
     }
 
     override fun visitTypeAuto(ctx: TypeAutoContext): Type {
-        TODO("Not yet implemented")
+        return TypeVariable(++typesContext.typeVariablesNum)
     }
 
     override fun visitTypeSum(ctx: TypeSumContext): Type {

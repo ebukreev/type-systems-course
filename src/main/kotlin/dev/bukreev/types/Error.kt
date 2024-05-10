@@ -34,7 +34,7 @@ fun reportUnexpectedType(expectedType: Type, actualType: Type, expression: ExprC
 
         if (actualType is TupleType && expectedType is TupleType) {
             if (actualType.types.size != expectedType.types.size)  {
-                ErrorUnexpectedTupleLength(expectedType, expression).report(parser)
+                ErrorUnexpectedTupleLength(expectedType.types.size, expression).report(parser)
             }
         }
 
@@ -89,6 +89,22 @@ data class ErrorUnexpectedTypeForExpression(val expected: Type, val actual: Type
                $actual
              для выражения
                ${expression.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorOccursCheckInfiniteType(val expected: Type, val actual: Type?, val expression: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_OCCURS_CHECK_INFINITE_TYPE:
+             во время унификации
+               $expected
+             и
+               $actual
+             для выражения
+               ${expression.toStringTree(parser)}
+             возникает ограничение,
+             порождающее (запрещённый) бесконечный тип   
        """.trimIndent()
     }
 }
@@ -305,13 +321,12 @@ data class ErrorTupleIndexOfBounds(val expression: ExprContext, val index: Int) 
     }
 }
 
-data class ErrorUnexpectedTupleLength(val expected: TupleType, val expression: ExprContext) : Error {
+data class ErrorUnexpectedTupleLength(val expectedSize: Int, val expression: ExprContext) : Error {
     override fun stringify(parser: stellaParser): String {
         return """
            ERROR_UNEXPECTED_TUPLE_LENGTH:
              ожидается кортеж
-               $expected
-             с длинной ${expected.types.size}
+             с длинной $expectedSize
              для выражения
                ${expression.toStringTree(parser)}
        """.trimIndent()

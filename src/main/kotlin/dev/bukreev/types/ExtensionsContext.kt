@@ -12,6 +12,8 @@ object ExtensionsContext {
 
     fun hasAmbiguousTypeAsBottom() = extensions.contains("#ambiguous-type-as-bottom")
 
+    fun hasTypeReconstruction() = extensions.contains("#type-reconstruction")
+
     fun reset() {
         extensions.clear()
     }

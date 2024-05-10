@@ -64,6 +64,12 @@ data class RefType(val nestedType: Type) : Type {
     }
 }
 
+data class TypeVariable(val num: Int) : Type {
+    override fun toString(): String {
+        return "?T$num"
+    }
+}
+
 data object Top : Type
 
 data object Bot : Type

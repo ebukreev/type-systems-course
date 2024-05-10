@@ -1,8 +1,20 @@
 package dev.bukreev.types
 
+import dev.bukreev.types.parsing.stellaParser.ExprContext
+
+data class Constraint(
+    val lhv: Type,
+    val rhv: Type,
+    val exprContext: ExprContext
+)
+
 class TypesContext {
     private val typesOfVariables = mutableMapOf<String, MutableList<Type>>()
     private val expectedTypes = mutableListOf<Type?>()
+
+    val constraintSet = mutableListOf<Constraint>()
+
+    var typeVariablesNum = 0
 
     fun getType(variable: String): Type? {
         return typesOfVariables[variable]?.lastOrNull()
