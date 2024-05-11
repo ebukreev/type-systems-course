@@ -6,9 +6,9 @@ class SolveFailException(val expected: Type, val actual: Type, val expr: ExprCon
 class OccursInfiniteTypeException(val expected: Type, val actual: Type, val expr: ExprContext) : Exception()
 
 object ConstraintSolver {
-    tailrec fun solve(constraints: List<Constraint>) {
+    fun solve(constraints: List<Constraint>): List<Pair<TypeVariable, Type>> {
         if (constraints.isEmpty()) {
-            return
+            return listOf()
         }
 
         val constraint = constraints.first()
@@ -19,10 +19,12 @@ object ConstraintSolver {
                 return solve(tail)
             }
             constraint.lhv is TypeVariable && !constraint.lhv.containsIn(constraint.rhv, constraint.exprContext) -> {
-                return solve(tail.map { it.substitute(constraint.lhv, constraint.rhv) })
+                return solve(tail.map { it.substitute(constraint.lhv, constraint.rhv) }) +
+                        listOf(Pair(constraint.lhv, constraint.rhv))
             }
             constraint.rhv is TypeVariable && !constraint.rhv.containsIn(constraint.lhv, constraint.exprContext) -> {
-                return solve(tail.map {it.substitute(constraint.rhv, constraint.lhv) })
+                return solve(tail.map {it.substitute(constraint.rhv, constraint.lhv) }) +
+                        listOf(Pair(constraint.rhv, constraint.lhv))
             }
             constraint.lhv is FuncType && constraint.rhv is FuncType -> {
                 return solve(tail + listOf(

@@ -242,7 +242,7 @@ class TypeChecker(
 
     override fun visitList(ctx: ListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top && expected !is TypeVariable) {
+        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
@@ -348,7 +348,7 @@ class TypeChecker(
 
     override fun visitAbstraction(ctx: AbstractionContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType != null && expectedType !is FuncType && expectedType !is Top && expectedType !is TypeVariable) {
+        if (expectedType != null && expectedType !is FuncType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedLambda(expectedType, ctx).report(parser)
         }
         val expectedArgTypes = (expectedType as? FuncType)?.argTypes
@@ -561,7 +561,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top && expectedType !is TypeVariable) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -586,7 +586,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top && expectedType !is TypeVariable) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -608,7 +608,7 @@ class TypeChecker(
             ErrorIllegalEmptyMatching(ctx).report(parser)
         }
 
-        val isExhaustive = ExhaustivenessChecker.isExhaustive(cases.map { it.pattern() }, expressionType, this)
+        val isExhaustive = ExhaustivenessChecker.isExhaustive(cases.map { it.pattern() }, expressionType, this, typesContext.constraintSet)
         val casesType = processMatchCase(cases.first(), expressionType)
 
         cases.drop(1).forEach {
@@ -649,103 +649,121 @@ class TypeChecker(
             is ParenthesisedPatternContext -> getVariablesInfoFromPattern(pattern.pattern(), type)
 
             is PatternFalseContext -> {
-                if (type != BoolType) {
+                if (type != BoolType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
                 listOf()
             }
 
             is PatternTrueContext -> {
-                if (type != BoolType) {
+                if (type != BoolType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
                 listOf()
             }
 
             is PatternUnitContext -> {
-                if (type != UnitType) {
+                if (type != UnitType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
                 listOf()
             }
 
             is PatternInlContext -> {
-                if (type !is SumType) {
+                if (type !is SumType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                getVariablesInfoFromPattern(pattern.pattern(), type.inl)
+                if (type is SumType) getVariablesInfoFromPattern(pattern.pattern(), type.inl)
+                else getVariablesInfoFromPattern(pattern.pattern(), TypeVariable(++typesContext.typeVariablesNum))
             }
 
             is PatternInrContext -> {
-                if (type !is SumType) {
+                if (type !is SumType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                getVariablesInfoFromPattern(pattern.pattern(), type.inr)
+                if (type is SumType) getVariablesInfoFromPattern(pattern.pattern(), type.inr)
+                else getVariablesInfoFromPattern(pattern.pattern(), TypeVariable(++typesContext.typeVariablesNum))
             }
 
             is PatternIntContext -> {
-                if (type != NatType) {
+                if (type != NatType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
                 listOf()
             }
 
             is PatternSuccContext -> {
-                if (type != NatType) {
+                if (type != NatType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                getVariablesInfoFromPattern(pattern.pattern(), type)
+                getVariablesInfoFromPattern(pattern.pattern(), NatType)
             }
 
             is PatternRecordContext -> {
-                if (type !is RecordType || pattern.patterns.map { it.label.text }.toSet() !=
-                    type.fields.map { it.first }.toSet()) {
+                if ((type !is RecordType || pattern.patterns.map { it.label.text }.toSet() !=
+                    type.fields.map { it.first }.toSet()) && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
 
+                if (type is RecordType) {
                 buildList { pattern.patterns.forEach { addAll(getVariablesInfoFromPattern(it.pattern(),
                     type.fields.first { f -> f.first == it.label.text }.second)) } }
+                } else  buildList { pattern.patterns.forEach { addAll(getVariablesInfoFromPattern(it.pattern(),
+                    TypeVariable(++typesContext.typeVariablesNum))) } }
             }
 
             is PatternTupleContext -> {
-                if (type !is TupleType || type.types.size != pattern.patterns.size) {
+                if ((type !is TupleType || type.types.size != pattern.patterns.size) && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
 
-                pattern.patterns.withIndex().flatMap {
-                    getVariablesInfoFromPattern(it.value, type.types[it.index])
+                if (type is TupleType) {
+                    pattern.patterns.withIndex().flatMap {
+                        getVariablesInfoFromPattern(it.value, type.types[it.index])
+                    }
+                } else pattern.patterns.withIndex().flatMap {
+                    getVariablesInfoFromPattern(it.value, TypeVariable(++typesContext.typeVariablesNum))
                 }
             }
 
             is PatternVariantContext -> {
-                if (type !is VariantType || !type.variants.any { it.first == pattern.label.text }) {
+                if ((type !is VariantType || !type.variants.any { it.first == pattern.label.text }) && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                val labelType = type.variants.first { it.first == pattern.label.text }.second
-                if (labelType != null && pattern.pattern() == null) {
-                    ErrorUnexpectedNullaryVariantPattern(pattern, type).report(parser)
-                }
-                if (labelType == null && pattern.pattern() != null) {
-                    ErrorUnexpectedNonNullaryVariantPattern(pattern, type).report(parser)
-                }
-                labelType?.let {
-                    getVariablesInfoFromPattern(pattern.pattern(), it)
-                } ?: listOf()
+                if (type is VariantType) {
+                    val labelType = type.variants.first { it.first == pattern.label.text }.second
+                    if (labelType != null && pattern.pattern() == null) {
+                        ErrorUnexpectedNullaryVariantPattern(pattern, type).report(parser)
+                    }
+                    if (labelType == null && pattern.pattern() != null) {
+                        ErrorUnexpectedNonNullaryVariantPattern(pattern, type).report(parser)
+                    }
+                    labelType?.let {
+                        getVariablesInfoFromPattern(pattern.pattern(), it)
+                    } ?: listOf()
+                } else getVariablesInfoFromPattern(pattern.pattern(), TypeVariable(++typesContext.typeVariablesNum))
             }
 
             is PatternListContext -> {
-                if (type !is ListType) {
+                if (type !is ListType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                pattern.patterns.flatMap { getVariablesInfoFromPattern(it, type.contentType) }
+                if (type is ListType) {
+                    pattern.patterns.flatMap { getVariablesInfoFromPattern(it, type.contentType) }
+                } else pattern.patterns.flatMap { getVariablesInfoFromPattern(it, TypeVariable(++typesContext.typeVariablesNum)) }
             }
 
             is PatternConsContext -> {
-                if (type !is ListType) {
+                if (type !is ListType && type !is TypeVariable) {
                     ErrorUnexpectedPatternForType(type, pattern).report(parser)
                 }
-                buildList {
-                    addAll(getVariablesInfoFromPattern(pattern.head, type.contentType))
+                if (type is ListType) {
+                    buildList {
+                        addAll(getVariablesInfoFromPattern(pattern.head, type.contentType))
+                        addAll(getVariablesInfoFromPattern(pattern.tail, type))
+                    }
+                } else buildList {
+                    addAll(getVariablesInfoFromPattern(pattern.head, TypeVariable(++typesContext.typeVariablesNum)))
                     addAll(getVariablesInfoFromPattern(pattern.tail, type))
                 }
             }
@@ -871,7 +889,7 @@ class TypeChecker(
                 }
             }
 
-            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
+            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this, typesContext.constraintSet)) {
                 ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
             }
         }
@@ -966,7 +984,7 @@ class TypeChecker(
 
     override fun visitDotTuple(ctx: DotTupleContext): Type {
         val tupleType = typesContext.runWithExpectedType(null) { ctx.expr().accept(this) }
-        if (tupleType !is TupleType && tupleType !is TypeVariable) {
+        if (tupleType !is TupleType && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorNotATuple(ctx, tupleType).report(parser)
         }
 
@@ -987,11 +1005,13 @@ class TypeChecker(
     override fun visitFix(ctx: FixContext): Type {
         val expressionExpectedType = typesContext.getExpectedType()?.let { FuncType(listOf(it), it) }
         val expressionType = typesContext.runWithExpectedType(expressionExpectedType) { ctx.expr().accept(this) }
-        if (expressionType !is FuncType || expressionType.argTypes.size != 1) {
+        if (!ExtensionsContext.hasTypeReconstruction() && (expressionType !is FuncType || expressionType.argTypes.size != 1)) {
             ErrorNotAFunction(ctx.expr(), expressionType).report(parser)
         }
 
-        val expectedType = FuncType(expressionType.argTypes, expressionType.argTypes.first())
+        val expectedType =
+            if (expressionType is FuncType) FuncType(expressionType.argTypes, expressionType.argTypes.first())
+            else TypeVariable(++typesContext.typeVariablesNum).let { FuncType(listOf(it), it) }
         if (ExtensionsContext.hasTypeReconstruction()) {
             typesContext.constraintSet.add(Constraint(expressionType, expectedType, ctx))
         } else {
@@ -1025,7 +1045,7 @@ class TypeChecker(
                 }
             }
 
-            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this)) {
+            if (!ExhaustivenessChecker.isExhaustive(listOf(pattern), patternBindingType, this, typesContext.constraintSet)) {
                 ErrorNonexhaustiveLetPatterns(patternBindingType, ctx).report(parser)
             }
 
@@ -1061,7 +1081,7 @@ class TypeChecker(
 
     override fun visitTuple(ctx: TupleContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is TupleType && expected !is Top && expected !is TypeVariable) {
+        if (expected != null && expected !is TupleType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedTuple(expected, ctx).report(parser)
         }
 
@@ -1081,7 +1101,7 @@ class TypeChecker(
 
     override fun visitConsList(ctx: ConsListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top && expected !is TypeVariable) {
+        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
