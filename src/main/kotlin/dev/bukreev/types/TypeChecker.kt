@@ -47,9 +47,10 @@ class TypeChecker(
         var mainFunctionType: Type? = null
         for (decl in ctx.decls) {
             val type = decl.accept(this)
-            if (decl is DeclFunContext) {
-                typesContext.addTypeInfo(decl.name.text, type)
-                if (decl.name.text == "main") {
+            if (decl is DeclFunContext || decl is DeclFunGenericContext) {
+                val name = if (decl is DeclFunContext) decl.name else (decl as DeclFunGenericContext).name
+                typesContext.addTypeInfo(name.text, type)
+                if (name.text == "main") {
                     mainFunctionType = type
                 }
             }
@@ -117,7 +118,39 @@ class TypeChecker(
     }
 
     override fun visitDeclFunGeneric(ctx: DeclFunGenericContext): Type {
-        TODO("Not yet implemented")
+        val typeParams = ctx.generics.map { UniversalTypeVar(it.text) }
+        val params = ctx.paramDecls
+        val paramsInfo = typesContext.runWithGenerics(typeParams) {
+            params.map { Pair(it.name.text, it.paramType.accept(this)) }
+        }
+        val returnType = typesContext.runWithGenerics(typeParams) { ctx.returnType.accept(this) }
+        var funcType: Type = FuncType(paramsInfo.map { it.second }, returnType)
+        if (typeParams.isNotEmpty()) {
+            funcType = UniversalType(typeParams, funcType)
+        }
+
+        return typesContext.runWithTypesInfo(paramsInfo.plus(Pair(ctx.name.text, funcType))) {
+            val nestedFunctions = ctx.localDecls.filterIsInstance<DeclFunContext>().map {
+                Pair(it.name.text, it.accept(this))
+            }
+            typesContext.runWithTypesInfo(nestedFunctions) {
+                typesContext.runWithExpectedType(returnType) {
+                    typesContext.runWithGenerics(typeParams) {
+                        val returnExpressionType = ctx.returnExpr.accept(this)
+                        if (!returnExpressionType.isApplicable(returnType)) {
+                            reportUnexpectedType(
+                                returnType,
+                                returnExpressionType,
+                                ctx.returnExpr,
+                                parser
+                            )
+                        }
+
+                        funcType
+                    }
+                }
+            }
+        }
     }
 
     override fun visitDeclTypeAlias(ctx: DeclTypeAliasContext): Type {
@@ -180,7 +213,19 @@ class TypeChecker(
     }
 
     override fun visitTypeAbstraction(ctx: TypeAbstractionContext): Type {
-        TODO("Not yet implemented")
+        val generics = ctx.generics.map { UniversalTypeVar(it.text) }
+
+        var expectedType: Type? = typesContext.getExpectedType() as? UniversalType
+        if (expectedType is UniversalType && expectedType.variables.size == generics.size) {
+            expectedType = expectedType.nestedType.substitute(
+                expectedType.variables.mapIndexed { index, typeVar -> Pair(typeVar, generics[index]) }.toMap()
+            )
+        }
+
+        val nestedType = typesContext.runWithExpectedType(expectedType) {
+            typesContext.runWithGenerics(generics) { ctx.expr().accept(this) }
+        }
+        return UniversalType(generics, nestedType)
     }
 
     override fun visitDivide(ctx: DivideContext): Type {
@@ -242,7 +287,7 @@ class TypeChecker(
 
     override fun visitList(ctx: ListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction() && expected !is UniversalTypeVar) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
@@ -348,7 +393,7 @@ class TypeChecker(
 
     override fun visitAbstraction(ctx: AbstractionContext): Type {
         val expectedType = typesContext.getExpectedType()
-        if (expectedType != null && expectedType !is FuncType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expectedType != null && expectedType !is FuncType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction() && expectedType !is UniversalTypeVar) {
             ErrorUnexpectedLambda(expectedType, ctx).report(parser)
         }
         val expectedArgTypes = (expectedType as? FuncType)?.argTypes
@@ -561,7 +606,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction() && expectedType !is UniversalTypeVar) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -586,7 +631,7 @@ class TypeChecker(
         if (expectedType == null && !ExtensionsContext.hasAmbiguousTypeAsBottom() && !ExtensionsContext.hasTypeReconstruction()) {
             ErrorAmbiguousSumType(ctx).report(parser)
         }
-        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expectedType != null && expectedType !is SumType && expectedType !is Top && !ExtensionsContext.hasTypeReconstruction() && expectedType !is UniversalTypeVar) {
             ErrorUnexpectedInjection(expectedType, ctx).report(parser)
         }
 
@@ -800,7 +845,7 @@ class TypeChecker(
 
     override fun visitRecord(ctx: RecordContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is RecordType && expected !is Top) {
+        if (expected != null && expected !is RecordType && expected !is Top && expected !is UniversalTypeVar) {
             ErrorUnexpectedRecord(expected, ctx).report(parser)
         }
 
@@ -853,7 +898,19 @@ class TypeChecker(
     }
 
     override fun visitTypeApplication(ctx: TypeApplicationContext): Type {
-        TODO("Not yet implemented")
+        val funType = ctx.`fun`.accept(this)
+        if (funType !is UniversalType) {
+            ErrorNotAGenericFunction(ctx).report(parser)
+        }
+        if (ctx.types.size != funType.variables.size) {
+            ErrorIncorrectNumberOfTypeArguments(ctx.types.size, funType.variables.size, ctx).report(parser)
+        }
+
+        val typeArgs = ctx.types.map { it.accept(this) }
+        val typesMapping = funType.variables
+            .mapIndexed { index, typeVar -> Pair(typeVar, typeArgs[index]) }.toMap()
+
+        return funType.substitute(typesMapping)
     }
 
     override fun visitLetRec(ctx: LetRecContext): Type {
@@ -1081,7 +1138,7 @@ class TypeChecker(
 
     override fun visitTuple(ctx: TupleContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is TupleType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expected != null && expected !is TupleType && expected !is Top && !ExtensionsContext.hasTypeReconstruction() && expected !is UniversalTypeVar) {
             ErrorUnexpectedTuple(expected, ctx).report(parser)
         }
 
@@ -1101,7 +1158,7 @@ class TypeChecker(
 
     override fun visitConsList(ctx: ConsListContext): Type {
         val expected = typesContext.getExpectedType()
-        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction()) {
+        if (expected != null && expected !is ListType && expected !is Top && !ExtensionsContext.hasTypeReconstruction() && expected !is UniversalTypeVar) {
             ErrorUnexpectedList(expected, ctx).report(parser)
         }
 
@@ -1230,7 +1287,9 @@ class TypeChecker(
     }
 
     override fun visitTypeVar(ctx: TypeVarContext): Type {
-        TODO("Not yet implemented")
+        return typesContext.getGeneric(ctx.name.text) ?: run {
+            ErrorUndefinedTypeVariable(ctx.name.text).report(parser)
+        }
     }
 
     override fun visitTypeVariant(ctx: TypeVariantContext): Type {
@@ -1261,7 +1320,8 @@ class TypeChecker(
     }
 
     override fun visitTypeForAll(ctx: TypeForAllContext): Type {
-        TODO("Not yet implemented")
+        val typeArgs = ctx.types.map { UniversalTypeVar(it.text) }
+        return UniversalType(typeArgs, typesContext.runWithGenerics(typeArgs) { ctx.stellatype().accept(this) })
     }
 
     override fun visitTypeRecord(ctx: TypeRecordContext): Type {

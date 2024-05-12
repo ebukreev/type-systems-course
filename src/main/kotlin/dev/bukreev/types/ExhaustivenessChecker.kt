@@ -80,7 +80,7 @@ object ExhaustivenessChecker {
 
             is FuncType, is RefType, is Bot, is Top -> false
 
-            is TypeVariable -> true
+            is TypeVariable, is UniversalTypeVar, is UniversalType -> true
         }
     }
 

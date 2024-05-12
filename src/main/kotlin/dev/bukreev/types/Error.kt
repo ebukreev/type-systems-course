@@ -594,3 +594,39 @@ data class ErrorUnexpectedSubtype(val expected: Type, val actual: Type?, val exp
        """.trimIndent()
     }
 }
+
+data class ErrorUndefinedTypeVariable(var name: String) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_UNDEFINED_TYPE_VARIABLE:
+             встретилась необъявленная типовая переменная
+               $name
+       """.trimIndent()
+    }
+}
+
+data class ErrorNotAGenericFunction(val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_NOT_A_GENERIC_FUNCTION:
+             при попытке применить универсальное
+             выражение к типовому аргументу, 
+             выражение оказалось не универсальной функцией:
+               ${expr.toStringTree(parser)}
+       """.trimIndent()
+    }
+}
+
+data class ErrorIncorrectNumberOfTypeArguments(val expected: Int, val actual: Int, val expr: ExprContext) : Error {
+    override fun stringify(parser: stellaParser): String {
+        return """
+           ERROR_INCORRECT_NUMBER_OF_TYPE_ARGUMENTS:
+             вызов универсальной функции
+               ${expr.toStringTree(parser)}
+             происходит с некорректным количеством типов-аргументов
+               $actual
+             вместо
+               $expected
+       """.trimIndent()
+    }
+}

@@ -70,11 +70,38 @@ data class TypeVariable(val num: Int) : Type {
     }
 }
 
+class UniversalTypeVar(val name: String) : Type {
+    override fun toString(): String {
+        return name
+    }
+}
+
+data class UniversalType(
+    val variables: List<UniversalTypeVar>,
+    val nestedType: Type
+) : Type {
+    override fun toString(): String {
+        return variables.joinToString { "forall $it. " } + nestedType.toString()
+    }
+}
+
+
 data object Top : Type
 
 data object Bot : Type
 
 fun Type.isApplicable(expected: Type): Boolean {
+    if (this is UniversalTypeVar && expected is UniversalTypeVar)
+        return this.name == expected.name
+    if (this is UniversalType && expected is UniversalType) {
+        if (this.variables.size != expected.variables.size) {
+            return false
+        }
+        return this.substitute(this.variables
+            .mapIndexed { index, typeVar -> Pair(typeVar, expected.variables[index]) }.toMap())
+            .isApplicable(expected.nestedType)
+    }
+
     if (this == expected) return true
 
     if (!ExtensionsContext.hasStructuralSubtyping()) return false
@@ -132,4 +159,27 @@ fun Type.isApplicable(expected: Type): Boolean {
     }
 
     return false
+}
+
+fun Type.substitute(typesMapping: Map<UniversalTypeVar, Type>): Type {
+    return when (this) {
+        is UniversalType -> {
+            val substituted = nestedType.substitute(typesMapping)
+            if (!typesMapping.keys.all { this.variables.contains(it) }) {
+                UniversalType(this.variables, substituted)
+            } else {
+                substituted
+            }
+        }
+        is FuncType -> FuncType(argTypes.map { it.substitute(typesMapping) }, returnType.substitute(typesMapping))
+        is ListType -> ListType(contentType.substitute(typesMapping))
+        is RecordType -> RecordType(fields.map { Pair(it.first, it.second.substitute(typesMapping)) })
+        is SumType -> SumType(inl.substitute(typesMapping), inr.substitute(typesMapping))
+        is TupleType -> TupleType(types.map { it.substitute(typesMapping) })
+        is VariantType -> VariantType(variants.map { Pair(it.first, it.second?.substitute(typesMapping)) })
+
+        is UniversalTypeVar -> typesMapping.getOrDefault(this, this)
+
+        else -> this
+    }
 }

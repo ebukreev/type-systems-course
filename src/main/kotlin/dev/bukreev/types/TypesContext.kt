@@ -11,6 +11,7 @@ data class Constraint(
 class TypesContext {
     private val typesOfVariables = mutableMapOf<String, MutableList<Type>>()
     private val expectedTypes = mutableListOf<Type?>()
+    private val generics = mutableListOf<List<UniversalTypeVar>>()
 
     val constraintSet = mutableListOf<Constraint>()
 
@@ -49,6 +50,19 @@ class TypesContext {
         } finally {
             typesInfo.forEach { removeTypeInfo(it.first) }
         }
+    }
+
+    fun <T> runWithGenerics(typeVars: List<UniversalTypeVar>, action: () -> T): T {
+        generics.add(typeVars)
+        try {
+            return action()
+        } finally {
+            generics.removeLast()
+        }
+    }
+
+    fun getGeneric(name: String): UniversalTypeVar? {
+        return generics.asReversed().firstOrNull { it.any { v -> v.name == name } }?.first { it.name == name }
     }
 
     fun addTypeInfo(variable: String, type: Type) {
